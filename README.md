@@ -25,6 +25,29 @@
 
 Python 3.8以降が必要です。
 
+## 仮想環境の設定方法
+
+### Python 仮想環境 (venv) を使用する場合
+
+1. 仮想環境を作成します:
+
+    ```bash
+    python3 -m venv venv
+    ```
+
+2. 仮想環境を有効化します:
+    - **Linux/macOS**:
+
+      ```bash
+      source venv/bin/activate
+      ```
+
+    - **Windows**:
+
+      ```bash
+      .\venv\Scripts\activate
+      ```
+
 ## インストール手順
 
 1. このリポジトリをクローンしてください。
@@ -55,6 +78,15 @@ python3 app.py
 
 - `/path/to/images` は、処理したい画像が含まれるディレクトリに置き換えてください。
 - 検出された重複画像はログに記録されます。また、削除または別のディレクトリに移動するオプションが利用可能です。
+- サーバー起動後、ブラウザで以下の URL にアクセスしてください:
+  - <http://localhost:5000> (デフォルト設定の場合)
+  - カスタムホストやポートを指定する場合は以下のように実行してください:
+
+    ```bash
+    python3 app.py --host 127.0.0.1 --port 8080
+    ```
+
+    上記の例では、ブラウザで <http://127.0.0.1:8080> にアクセスしてください。
 
 ## ディレクトリ構成
 
@@ -67,7 +99,16 @@ dupimg/
 ├── requirements.txt       # 必要なPythonライブラリ
 ├── app.py                 # Webサーバーのエントリーポイント
 ├── static/                # フロントエンドの静的ファイル（CSSやJavaScript）
+│   ├── css/
+│   │   └── styles.css     # 共通のスタイルシート
+│   └── js/
+│       └── scripts.js     # 共通のJavaScript
 ├── templates/             # フロントエンドのHTMLテンプレート
+│   ├── index.html         # 初期ページ
+│   ├── settings.html      # 対象ディレクトリ設定ページ
+│   ├── progress.html      # 検出中ページ
+│   ├── results.html       # 検出結果ページ
+│   └── trash.html         # ごみ箱ページ
 ├── utils/
 │   ├── __init__.py        # ユーティリティの初期化
 │   ├── image_processor.py # 画像比較ロジック
