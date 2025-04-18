@@ -1,0 +1,13 @@
+{
+  "name": "dupimg",
+  "version": "0.1.0",
+  "description": "Duplicate image detection tool",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "python3 app.py"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

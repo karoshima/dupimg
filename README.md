@@ -23,30 +23,44 @@
 
 ## 動作環境
 
-Python 3.8以降が必要です。
+このプロジェクトを動作させるには、以下の環境が必要です：
 
-## 仮想環境の設定方法
+1. **Python 3.8以降**
+   - Python がインストールされていることを確認してください。
+   - 以下のコマンドでバージョンを確認できます：
 
-### Python 仮想環境 (venv) を使用する場合
+     ```bash
+     python3 --version
+     ```
 
-1. 仮想環境を作成します:
+2. **Node.js と npm**
+   - Node.js と npm がインストールされていることを確認してください。
+   - 以下のコマンドでバージョンを確認できます：
 
-    ```bash
-    python3 -m venv venv
-    ```
+     ```bash
+     node -v
+     npm -v
+     ```
 
-2. 仮想環境を有効化します:
-    - **Linux/macOS**:
+   - インストールされていない場合は、Node.js サイトの「[Node.js®をダウンロードする](https://nodejs.org/ja/download)」を参照して、node と npm をインストールしてください。
 
-      ```bash
-      source venv/bin/activate
-      ```
+## 初期設定
 
-    - **Windows**:
+以下のコマンドを実行して、プロジェクトの初期設定を行います。
 
-      ```bash
-      .\venv\Scripts\activate
-      ```
+```bash
+. ./setup.sh
+```
+
+ *注意**: `./setup.sh` ではなく、必ず `. ./setup.sh` または `source ./setup.sh` を使用してください。  
+これは、スクリプト内で仮想環境を有効化するために、現在のシェルでスクリプトを実行する必要があるためです。
+
+このスクリプトは以下を自動で行います：
+
+1. Python 仮想環境の作成と有効化。
+2. 必要な Python パッケージのインストール。
+3. 必要な Node.js パッケージのインストール。
+4. TypeScript のコンパイル。
 
 ## インストール手順
 
@@ -62,10 +76,10 @@ Python 3.8以降が必要です。
     cd dupimg
     ```
 
-3. 必要な依存関係をインストールしてください。
+3. 初期設定スクリプトを実行してください。
 
     ```bash
-    python3 -m pip install -r requirements.txt
+    . ./setup.sh
     ```
 
 ## 使い方
@@ -88,6 +102,21 @@ python3 app.py
 
     上記の例では、ブラウザで <http://127.0.0.1:8080> にアクセスしてください。
 
+## クリーンアップ
+
+以下のコマンドを実行して、プロジェクトのクリーンアップを行います。
+
+```bash
+. ./cleanup.sh
+```
+
+このスクリプトは以下を自動で行います：
+
+1. 仮想環境が有効化されている場合は無効化。
+2. Python 仮想環境 (`venv`) の削除。
+3. Node.js パッケージ (`node_modules`) の削除。
+4. TypeScript のコンパイル結果 (`static/js`) の削除。
+
 ## ディレクトリ構成
 
 以下はプロジェクトのディレクトリ構成です。
@@ -101,8 +130,10 @@ dupimg/
 ├── static/                # フロントエンドの静的ファイル（CSSやJavaScript）
 │   ├── css/
 │   │   └── styles.css     # 共通のスタイルシート
-│   └── js/
-│       └── scripts.js     # 共通のJavaScript
+│   ├── js/
+│   │   └── scripts.js     # コンパイルされたJavaScript
+│   └── ts/
+│       └── scripts.ts     # TypeScript ソースコード
 ├── templates/             # フロントエンドのHTMLテンプレート
 │   ├── index.html         # 初期ページ
 │   ├── settings.html      # 対象ディレクトリ設定ページ
