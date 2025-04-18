@@ -1,5 +1,8 @@
-from flask import Flask, request, jsonify, render_template
 import argparse
+import json
+import os
+
+from flask import Flask, request, jsonify, render_template
 
 app = Flask(__name__)
 
@@ -13,13 +16,17 @@ def index():
 def settings():
     if request.method == "POST":
         # フォームデータを取得
-        directory = request.form.get("directory")
+        directories = request.form.get("directories")
         algorithm = request.form.get("algorithm")
         similarity = request.form.get("similarity")
+
+        # ディレクトリリストを JSON 形式から Python リストに変換
+        directories = json.loads(directories) if directories else []
+
         # 仮のレスポンス
         return jsonify({
             "status": "success",
-            "directory": directory,
+            "directories": directories,
             "algorithm": algorithm,
             "similarity": similarity
         })
@@ -55,6 +62,30 @@ def trash():
         {"id": 2, "filename": "deleted_image2.jpg"}
     ]
     return jsonify(trash_data)
+
+####
+# 上記の各ページ内で使用する、ユーティリティエンドポイント
+
+# サーバー側のディレクトリ構造を取得するエンドポイント
+@app.route("/list_directories", methods=["GET"])
+def list_directories():
+    """
+    指定されたパスのディレクトリ構造を取得して返すエンドポイント。
+    クエリパラメータ 'path' を使用して基準となるディレクトリを指定。
+    """
+    base_path = request.args.get("path", "/")  # デフォルトはルートディレクトリ
+    try:
+        # 指定されたパス内のディレクトリをリストアップ
+        directories = [
+            {"name": name, "path": os.path.join(base_path, name)}
+            for name in os.listdir(base_path)
+            if os.path.isdir(os.path.join(base_path, name))
+        ]
+        return jsonify({"status": "success", "directories": directories})
+    except Exception as e:
+        # エラーが発生した場合はエラーメッセージを返す
+        return jsonify({"status": "error", "message": str(e)})
+
 
 if __name__ == "__main__":
     # 引数のパーサーを設定

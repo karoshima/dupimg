@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>対象ディレクトリ設定ページ</title>
     <link rel="stylesheet" href="/static/css/styles.css">
+    <script src="/static/js/scripts.js" defer></script>
 </head>
 <body>
     <header>
@@ -13,7 +14,10 @@
     <main>
         <form id="settings-form" method="POST" action="/settings">
             <label for="directory">処理対象のディレクトリを選択してください。</label>
-            <input type="text" id="directory" name="directory" placeholder="/path/to/images">
+            <input type="text" id="directory" placeholder="/path/to/images">
+            <button type="button" id="add-directory">追加</button>
+            <button type="button" id="select-directory">ディレクトリを選択</button>
+            <ul id="selected-directories" class="explorer"></ul>
             <label for="algorithm">ハッシュアルゴリズム:</label>
             <select id="algorithm" name="algorithm">
                 <option value="phash">pHash</option>
@@ -26,6 +30,12 @@
         <nav>
             <a href="/trash">ごみ箱ページへのリンク</a>
         </nav>
+        <!-- ポップアップウィンドウ -->
+        <div id="directory-popup" style="display: none;">
+            <h2>ディレクトリを選択</h2>
+            <ul id="directory-list"></ul>
+            <button id="close-popup">閉じる</button>
+        </div>
     </main>
     <footer>
         <p>バージョン情報とリンク</p>

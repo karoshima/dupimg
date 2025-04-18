@@ -1,0 +1,59 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+header, footer {
+  background: #f4f4f4;
+  padding: 10px 20px;
+  text-align: center;
+}
+
+main {
+  padding: 20px;
+}
+
+nav a {
+  display: block;
+  margin: 10px 0;
+  color: #007BFF;
+  text-decoration: none;
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+/* エクスプローラー風のスタイル */
+.explorer {
+  list-style-type: none;
+  padding-left: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.explorer li {
+  cursor: pointer;
+  margin: 5px 0;
+  position: relative;
+}
+
+.explorer li::before {
+  content: "📁"; /* ディレクトリアイコン */
+  margin-right: 8px;
+  position: absolute;
+  left: -20px;
+}
+
+.explorer li.file::before {
+  content: "📄"; /* ファイルアイコン */
+}
+
+.explorer li.collapsed > ul {
+  display: none; /* 折りたたみ時に非表示 */
+}
+
+.explorer li.expanded > ul {
+  display: block; /* 展開時に表示 */
+}
+
