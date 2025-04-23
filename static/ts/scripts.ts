@@ -1,30 +1,34 @@
 // フォームの送信イベントをリッスン
-const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
+export function initialize(): void {
+  const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
 
-settingsForm.addEventListener("submit", async (event: Event) => {
-  event.preventDefault(); // フォームのデフォルト動作を無効化
+  settingsForm.addEventListener("submit", async (event: Event) => {
+    event.preventDefault(); // フォームのデフォルト動作を無効化
 
-  const formData = new FormData(settingsForm);
-  formData.append("directories", JSON.stringify(selectedDirectories)); // ディレクトリリストを追加
+    const formData = new FormData(settingsForm);
+    formData.append("directories", JSON.stringify(selectedDirectories)); // ディレクトリリストを追加
 
-  try {
-    const response = await fetch("/settings", {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const response = await fetch("/settings", {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!response.ok) {
-      throw new Error(`HTTPエラー: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTPエラー: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(result); // サーバーからのレスポンスを確認
+      alert(`選択されたディレクトリ: ${result.directories}`);
+    } catch (error) {
+      console.error("エラーが発生しました:", error);
+      alert("エラーが発生しました。詳細はコンソールを確認してください。");
     }
-
-    const result = await response.json();
-    console.log(result); // サーバーからのレスポンスを確認
-    alert(`選択されたディレクトリ: ${result.directories}`);
-  } catch (error) {
-    console.error("エラーが発生しました:", error);
-    alert("エラーが発生しました。詳細はコンソールを確認してください。");
-  }
-});
+  });
+}
+// DOMContentLoaded イベントで初期化
+document.addEventListener("DOMContentLoaded", initialize);
 
 // 選択されたディレクトリを管理するリスト
 const selectedDirectories: string[] = [];
@@ -94,18 +98,32 @@ document.getElementById("select-directory")?.addEventListener("click", async () 
   await fetchDirectories("/", directoryList);
 
   // ポップアップを表示
-  const popup = document.getElementById("directory-popup") as HTMLDivElement;
-  popup.style.display = "block";
+  showPopup();
 });
 
 // ポップアップを閉じる
 document.getElementById("close-popup")?.addEventListener("click", () => {
-  const popup = document.getElementById("directory-popup") as HTMLDivElement;
-  popup.style.display = "none";
+  hidePopup();
 });
 
+// ポップアップを表示する関数
+export function showPopup(): void {
+  const popup = document.getElementById("directory-popup") as HTMLDivElement;
+  if (popup) {
+    popup.style.display = "block";
+  }
+}
+
+// ポップアップを非表示にする関数
+export function hidePopup(): void {
+  const popup = document.getElementById("directory-popup") as HTMLDivElement;
+  if (popup) {
+    popup.style.display = "none";
+  }
+}
+
 // ディレクトリ構造を取得して表示する関数
-async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
+export async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
   try {
     const response = await fetch(`/list_directories?path=${encodeURIComponent(path)}`);
     const data = await response.json();

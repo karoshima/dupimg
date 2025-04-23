@@ -82,6 +82,28 @@
     . ./setup.sh
     ```
 
+## テストの実行方法
+
+本プロジェクトでは、Jest を使用してテストを実行します。
+
+### テストの実行
+
+以下のコマンドでテストを実行できます。
+
+```bash
+npx jest
+```
+
+### カバレッジレポートの作成
+
+以下のコマンドでカバレッジレポートを生成できます。
+
+```bash
+npx jest --coverage
+```
+
+カバレッジレポートは `coverage/` ディレクトリに出力されます。
+
 ## 使い方
 
 以下のコマンドを実行して Web サーバーを起動してください。
@@ -145,8 +167,12 @@ dupimg/
 │   ├── image_processor.py # 画像比較ロジック
 │   ├── logger.py          # ログ出力のユーティリティ
 ├── tests/
-│   ├── test_image_processor.py # ユニットテスト
-│   ├── __init__.py            # テストモジュールの初期化
+│   ├── frontend/
+│   │   └── scripts.test.ts       # Jest を使ったフロントエンドのテスト
+│   ├── backend/
+│   │   ├── test_image_processor.py # Python を使ったバックエンドのテスト
+│   │   └── __init__.py           # Python テストモジュールの初期化
+│   └── __init__.py               # テストディレクトリ全体の初期化
 ├── output/                # 処理済みまたは重複画像の出力ディレクトリ
 └── examples/              # サンプル入力および出力
 ```
