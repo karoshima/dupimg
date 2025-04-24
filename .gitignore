@@ -2,3 +2,4 @@ node_modules
 venv
 static/js
 coverage
+utils/__pycache__

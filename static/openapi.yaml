@@ -1,0 +1,188 @@
+openapi: 3.0.0
+info:
+  title: 重複画像処理ツール API
+  version: 1.0.0
+  description: 重複画像処理ツールの API ドキュメント
+servers:
+  - url: http://localhost:5000
+    description: ローカル開発環境
+
+paths:
+  /:
+    get:
+      summary: 初期ページ
+      description: 初期ページを返します。
+      responses:
+        '200':
+          description: HTML ページ
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /settings:
+    get:
+      summary: 対象ディレクトリ設定ページ
+      description: 対象ディレクトリ設定ページを返します。
+      responses:
+        '200':
+          description: HTML ページ
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      summary: 設定を送信
+      description: 対象ディレクトリや設定を送信します。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                directories:
+                  type: array
+                  items:
+                    type: string
+                  description: 処理対象ディレクトリのリスト
+                algorithm:
+                  type: string
+                  description: 使用するハッシュアルゴリズム
+                similarity:
+                  type: integer
+                  description: 類似度の閾値
+      responses:
+        '200':
+          description: 設定が正常に送信された場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  directories:
+                    type: array
+                    items:
+                      type: string
+                  algorithm:
+                    type: string
+                  similarity:
+                    type: integer
+
+  /list_directories:
+    get:
+      summary: サーバー側のディレクトリ構造を取得
+      description: 指定されたパスのディレクトリ構造を取得します。
+      parameters:
+        - name: path
+          in: query
+          required: false
+          description: 基準となるディレクトリパス
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ディレクトリ構造を返します。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  directories:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        path:
+                          type: string
+        '400':
+          description: 不正なリクエスト
+        '500':
+          description: サーバーエラー
+
+  /progress:
+    get:
+      summary: 検出進捗を取得
+      description: 現在の検出進捗を取得します。
+      responses:
+        '200':
+          description: 検出進捗データを返します。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: integer
+                    description: 検出進捗のパーセンテージ
+
+  /results:
+    get:
+      summary: 検出結果を取得
+      description: 検出結果を取得します。
+      responses:
+        '200':
+          description: 検出結果データを返します。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    filename:
+                      type: string
+                    status:
+                      type: string
+
+  /trash:
+    get:
+      summary: ごみ箱の内容を取得
+      description: ごみ箱の内容を取得します。
+      responses:
+        '200':
+          description: ごみ箱データを返します。
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    filename:
+                      type: string
+    post:
+      summary: ごみ箱のファイルを削除
+      description: ごみ箱内のファイルを削除します。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                file_id:
+                  type: integer
+                  description: 削除するファイルの ID
+      responses:
+        '200':
+          description: ファイルが正常に削除された場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  file_id:
+                    type: integer
