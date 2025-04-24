@@ -3,8 +3,14 @@ import json
 import os
 
 from flask import Flask, request, jsonify, render_template
+from flask_swagger_ui import get_swaggerui_blueprint
+
+SWAGGER_URL = '/api/docs'
+API_URL = '/openapi.yaml'
+swaggerui_blueprint = get_swaggerui_blueprint(SWAGGER_URL, API_URL)
 
 app = Flask(__name__)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # 初期ページ
 @app.route("/")
@@ -62,6 +68,10 @@ def trash():
         {"id": 2, "filename": "deleted_image2.jpg"}
     ]
     return jsonify(trash_data)
+
+@app.route('/openapi.yaml')
+def openapi():
+    return app.send_static_file('openapi.yaml')
 
 ####
 # 上記の各ページ内で使用する、ユーティリティエンドポイント
