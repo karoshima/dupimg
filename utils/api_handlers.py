@@ -1,5 +1,7 @@
+import json
+import os
 from flask import jsonify, request, render_template
-from utils.directory_utils import list_subdirectories
+from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
 from utils.mock_data import get_progress_data, get_results_data, get_trash_data
 
 def register_routes(app):
@@ -41,6 +43,26 @@ def register_routes(app):
     def list_directories():
         base_path = request.args.get("path", "/")
         return list_subdirectories(base_path)
+
+    @app.route("/add_directory", methods=["POST"])
+    def add_directory():
+        """
+        手入力されたディレクトリを追加するエンドポイント。
+        """
+        directory = request.form.get("directory")
+        if not directory:
+            return jsonify({"status": "error", "message": "ディレクトリが指定されていません。"}), 400
+
+        # パスを正規化してチェック
+        abs_directory = os.path.normpath(os.path.abspath(directory))
+        if any(abs_directory == os.path.normpath(allowed_dir) for allowed_dir in allowed_directories):
+            return jsonify({"status": "error", "message": "指定されたディレクトリはすでに登録されています。"}), 400
+
+        if not is_directory_allowed(directory):
+            return jsonify({"status": "error", "message": "指定されたディレクトリは許可されていません。"}), 400
+
+        # 許可されたディレクトリの場合の処理（例: ディレクトリをリストに追加）
+        return jsonify({"status": "success", "message": "ディレクトリが追加されました。"})
 
     @app.route("/openapi.yaml")
     def openapi():
