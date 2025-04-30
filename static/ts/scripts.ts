@@ -23,6 +23,7 @@ function isSubdirectoryOfAny(dir: string, directories: string[]): boolean {
 // DOMContentLoaded イベントで初期化
 document.addEventListener("DOMContentLoaded", () => {
   const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
+  updateStartButtonState(); // 初期状態でボタンを更新
 
   settingsForm.addEventListener("submit", async (event: Event) => {
     event.preventDefault(); // フォームのデフォルト動作を無効化
@@ -48,12 +49,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const result = await response.json();
       console.log(result); // サーバーからのレスポンスを確認
       alert(`選択されたディレクトリ: ${result.directories}`);
+      window.location.href = "/progress"; // フォーム送信後にリダイレクト
     } catch (error) {
       console.error("エラーが発生しました:", error);
       alert("エラーが発生しました。詳細はコンソールを確認してください。");
     }
   });
 });
+
+// 「検出開始」ボタンの有効化/無効化を制御する関数
+function updateStartButtonState(): void {
+  const startButton = document.querySelector<HTMLButtonElement>('button[type="submit"]');
+  if (startButton) {
+    startButton.disabled = selectedDirectories.size === 0; // ディレクトリが空なら無効化
+  }
+}
 
 // ディレクトリをリストに追加する関数
 // @param directory - 追加するディレクトリのパス
@@ -72,6 +82,7 @@ function addDirectory(directory: string): void {
   selectedDirectories.add(directory);
 
   showDirectory()
+  updateStartButtonState(); // ボタンの状態を更新
 }
 
 // 選択されたディレクトリを表示する関数
@@ -95,6 +106,7 @@ function showDirectory(): void {
       selectedDirectories.delete(dir);
       listItem.remove();
       showDirectory();
+      updateStartButtonState(); // ボタンの状態を更新
     });
 
     listItem.appendChild(removeButton);
