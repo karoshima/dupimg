@@ -55,7 +55,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const result = await response.json();
       console.log(result); // サーバーからのレスポンスを確認
-      alert(`選択されたディレクトリ: ${result.directories}`);
       window.location.href = "/progress"; // フォーム送信後にリダイレクト
     } catch (error) {
       console.error("エラーが発生しました:", error);
