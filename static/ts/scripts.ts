@@ -1,6 +1,11 @@
 // 選択されたディレクトリを管理するリスト
 const selectedDirectories: Set<string> = new Set();
 
+// ページ遷移中かどうかを示すフラグ
+// - 「検出開始」ボタンが押された際に true に設定され、ページ遷移が完了するまで維持される。
+// - fetchDirectories() 内でエラーが発生した場合、このフラグを参照してページ遷移中のエラーを無視する。
+let isPageNavigating = false;
+
 // パスが別のパスのサブディレクトリかどうかを判定する関数
 // @param parent - 親ディレクトリのパス
 // @param child - 子ディレクトリのパス
@@ -23,6 +28,8 @@ function isSubdirectoryOfAny(dir: string, directories: string[]): boolean {
 // DOMContentLoaded イベントで初期化
 document.addEventListener("DOMContentLoaded", () => {
   const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
+  console.log("isPageNavigating: false -> true");
+  isPageNavigating = true; // ページ遷移時の /list_directories エラーを無視するために true に設定する
   updateStartButtonState(); // 初期状態でボタンを更新
 
   settingsForm.addEventListener("submit", async (event: Event) => {
@@ -53,6 +60,8 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("エラーが発生しました:", error);
       alert("エラーが発生しました。詳細はコンソールを確認してください。");
+      console.log("isPageNavigating: true -> false");
+      isPageNavigating = false; // ページ遷移が完了したのでフラグをリセット
     }
   });
 });
@@ -192,7 +201,9 @@ function hidePopup(): void {
 // ディレクトリ構造を取得して表示する関数
 async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
   try {
+    console.log("fetchDirectories() called with path:", path);
     const response = await fetch(`/list_directories?path=${encodeURIComponent(path)}`);
+    console.log("/list_directories response:", response);
     const data = await response.json();
 
     if (data.status === "success") {
@@ -200,41 +211,82 @@ async function fetchDirectories(path: string, parentElement: HTMLUListElement): 
       .sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name)) // 名前でソート
       .forEach((dir: { name: string; path: string }) => {
         const listItem = document.createElement("li");
-        listItem.textContent = dir.name;
         listItem.dataset.path = dir.path;
 
-        // ディレクトリ選択とサブディレクトリの開閉を1つのクリックイベントで実現
-        listItem.addEventListener("click", async (event) => {
-          event.stopPropagation(); // イベントの伝播を防止
+        // 「追加」ボタン
+        const addButton = document.createElement("button");
+        addButton.textContent = "追加";
+        addButton.style.marginLeft = "10px";
+        addButton.addEventListener("click", () => {
+          addDirectory(dir.path);
+        });
 
-          // ディレクトリを選択
-          const directoryInput = document.getElementById("directory") as HTMLInputElement;
-          directoryInput.value = dir.path; // 選択されたディレクトリをテキストボックスに表示
-          // alert(`ディレクトリ "${dir.path}" が選択されました`);
+        // 「開く」ボタン
+        const openButton = document.createElement("button");
+        openButton.textContent = "開く";
+        openButton.style.marginLeft = "10px";
+        openButton.style.display = "inline-block"; // 初期状態では有効
+        openButton.disabled = false; // 初期状態では有効
 
-          // サブディレクトリの開閉
-          if (listItem.classList.contains("expanded")) {
-            // 折りたたむ
-            const subList = listItem.querySelector("ul");
-            if (subList) {
-              subList.remove();
-            }
-            listItem.classList.remove("expanded");
-          } else {
-            // 展開する
-            const subList = document.createElement("ul");
-            listItem.appendChild(subList);
+        // 「閉じる」ボタン
+        const closeButton = document.createElement("button");
+        closeButton.textContent = "閉じる";
+        closeButton.style.marginLeft = "10px";
+        closeButton.style.display = "none"; // 初期状態では無効化
+
+        // 「開く」の動作
+        openButton.addEventListener("click", async () => {
+          if (openButton.style.display == "none") return; // クリック不可の場合は何もしない
+          openButton.disabled = true;
+          openButton.textContent = "(展開中)";
+          closeButton.style.display = "inline-block"; // 「閉じる」ボタンを有効化
+
+          const subList = document.createElement("ul");
+          listItem.appendChild(subList);
+
+          try {
             await fetchDirectories(dir.path, subList);
-            listItem.classList.add("expanded");
+            // await 中に「閉じる」されてなければ、「開く」を無効化する
+            if (!openButton.disabled) {
+              openButton.textContent = "開く"; // ボタンのテキストをリセット
+              openButton.style.display = "none"; // 「開く」ボタンを非表示
+              openButton.disabled = true; // 「開く」ボタンを無効化
+            }
+          } catch (error) {
+            console.error("サブディレクトリの取得中にエラーが発生しました:", error);
+            openButton.textContent = "開く"; // エラー時にボタンをリセット
+            openButton.disabled = false;
+            openButton.style.display = "inline-block"; // 「開く」ボタンを再表示
+            closeButton.style.display = "none"; // 「閉じる」ボタンを非表示
           }
         });
 
+        // 「閉じる」の動作
+        closeButton.addEventListener("click", () => {
+          const subList = listItem.querySelector("ul");
+          if (subList) {
+            subList.remove(); // サブディレクトリを削除
+          }
+          openButton.textContent = "開く"; // ボタンのテキストをリセット
+          openButton.disabled = false; // 「開く」ボタンを有効化
+          openButton.style.display = "inline-block"; // 「開く」ボタンを再表示
+          closeButton.style.display = "none"; // 「閉じる」ボタンを非表示
+        });
+
+        listItem.appendChild(addButton);
+        listItem.appendChild(openButton);
+        listItem.appendChild(closeButton);
+        listItem.appendChild(document.createTextNode(dir.name));
         parentElement.appendChild(listItem);
-      });
+    });
     } else {
       alert(`エラー: ${data.message}`);
     }
   } catch (error) {
-    console.error("ディレクトリの取得中にエラーが発生しました:", error);
+    if (isPageNavigating) {
+      console.warn("ディレクトリ取得中にページ遷移が発生したので、エラーを無視します。");
+    } else {
+      console.error("ディレクトリの取得中にエラーが発生しました:", error);
+    }
   }
 }
