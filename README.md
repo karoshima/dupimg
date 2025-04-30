@@ -109,7 +109,7 @@ npx jest --coverage
 以下のコマンドを実行して Web サーバーを起動してください。
 
 ```bash
-python3 app.py
+python3 app.py </path/to/images>
 ```
 
 - `/path/to/images` は、処理したい画像が含まれるディレクトリに置き換えてください。
