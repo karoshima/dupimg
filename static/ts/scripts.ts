@@ -20,7 +20,8 @@ function isSubdirectoryOfAny(dir: string, directories: string[]): boolean {
 }
 
 // フォームの送信イベントをリッスン
-export function initialize(): void {
+// DOMContentLoaded イベントで初期化
+document.addEventListener("DOMContentLoaded", () => {
   const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
 
   settingsForm.addEventListener("submit", async (event: Event) => {
@@ -52,9 +53,7 @@ export function initialize(): void {
       alert("エラーが発生しました。詳細はコンソールを確認してください。");
     }
   });
-}
-// DOMContentLoaded イベントで初期化
-document.addEventListener("DOMContentLoaded", initialize);
+});
 
 // ディレクトリをリストに追加する関数
 // @param directory - 追加するディレクトリのパス
@@ -163,7 +162,7 @@ document.getElementById("close-popup")?.addEventListener("click", () => {
 });
 
 // ポップアップを表示する関数
-export function showPopup(): void {
+function showPopup(): void {
   const popup = document.getElementById("directory-popup") as HTMLDivElement;
   if (popup) {
     popup.style.display = "block";
@@ -171,7 +170,7 @@ export function showPopup(): void {
 }
 
 // ポップアップを非表示にする関数
-export function hidePopup(): void {
+function hidePopup(): void {
   const popup = document.getElementById("directory-popup") as HTMLDivElement;
   if (popup) {
     popup.style.display = "none";
@@ -179,7 +178,7 @@ export function hidePopup(): void {
 }
 
 // ディレクトリ構造を取得して表示する関数
-export async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
+async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
   try {
     const response = await fetch(`/list_directories?path=${encodeURIComponent(path)}`);
     const data = await response.json();

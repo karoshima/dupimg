@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "target": "ES2016",
-    "module": "Node16",
+    "module": "ESNext",
     "strict": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "outDir": "./static/js",
     "rootDir": "./static/ts"
