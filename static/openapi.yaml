@@ -108,19 +108,41 @@ paths:
 
   /progress:
     get:
-      summary: 検出進捗を取得
-      description: 現在の検出進捗を取得します。
+      summary: 進捗モニタリング画面を取得
+      description: 進捗モニタリング用の HTML ページを返します。
       responses:
         '200':
-          description: 検出進捗データを返します。
+          description: 進捗モニタリング画面の HTML を返します。
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /progress/data:
+    get:
+      summary: 進捗データを取得
+      description: 現在の進捗状況を JSON 形式で返します。
+      responses:
+        '200':
+          description: 進捗データを返します。
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  time:
+                    type: string
+                    format: date-time
+                    description: サーバーの現在時刻
                   progress:
                     type: integer
-                    description: 検出進捗のパーセンテージ
+                    description: 処理の進捗率（0～100）
+                  status:
+                    type: string
+                    description: 現在の処理ステータス
+                  message:
+                    type: string
+                    description: 処理の詳細な説明
 
   /results:
     get:

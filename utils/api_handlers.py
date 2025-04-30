@@ -2,7 +2,8 @@ import json
 import os
 from flask import jsonify, request, render_template
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
-from utils.mock_data import get_progress_data, get_results_data, get_trash_data
+from utils.progress import get_progress_data
+from utils.mock_data import get_results_data, get_trash_data
 
 def register_routes(app):
     @app.route("/")
@@ -24,9 +25,13 @@ def register_routes(app):
             })
         return render_template("settings.html")
 
-    @app.route("/progress")
+    @app.route("/progress", methods=["GET"])
     def progress():
-        return jsonify(get_progress_data())
+        return render_template("progress.html")
+
+    @app.route("/progress/data", methods=["GET"])
+    def progress_data():
+        return get_progress_data()
 
     @app.route("/results")
     def results():

@@ -1,6 +1,3 @@
-def get_progress_data():
-    return {"progress": 50}
-
 def get_results_data():
     return [
         {"id": 1, "filename": "image1.jpg", "status": "duplicate"},
