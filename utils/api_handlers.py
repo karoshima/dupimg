@@ -26,7 +26,7 @@ def register_routes(app) -> None:
             algorithm = request.form.get("algorithm")
             similarity = request.form.get("similarity")
             directories = json.loads(directories) if directories else []
-            start_background_processing()
+            start_background_processing(directories, algorithm, similarity)
             return jsonify({
                 "status": "success",
                 "directories": directories,
