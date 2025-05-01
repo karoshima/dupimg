@@ -5,6 +5,7 @@ import time
 progress_data = {
     "time": "",
     "progress": 0,
+    "page": "/settings",
     "status": "未開始",
     "message": "",
     "steps": [
@@ -28,6 +29,7 @@ def background_image_processing():
     global progress_data
 
     # ステップ 1: 画像ファイルの一覧作成
+    progress_data["page"] = "/progress"
     progress_data["status"] = "一覧作成中"
     progress_data["message"] = "画像ファイルの一覧を作成しています..."
     progress_data["steps"][0]["status"] = "進行中"
@@ -56,6 +58,7 @@ def background_image_processing():
 
     # 全体の進捗を完了に設定
     progress_data["progress"] = 100
+    progress_data["page"] = "/results"
     progress_data["status"] = "完了"
     progress_data["message"] = "画像探索処理が完了しました。"
 

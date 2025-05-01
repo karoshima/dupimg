@@ -6,6 +6,10 @@ async function fetchProgressData(): Promise<void> {
     }
     const data = await response.json();
 
+    // 進捗データが満了してたらリダイレクト
+    if (data.page !== window.location.pathname) {
+      window.location.href = data.page;
+    }
     // 全体の進捗を表示
     document.getElementById("time")!.textContent = `現在時刻: ${data.time}`;
     document.getElementById("overall-progress")!.textContent = `全体進捗: ${data.progress}%`;
