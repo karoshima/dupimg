@@ -1,11 +1,10 @@
 import json
 import os
-from typing import List, Dict
-from flask import jsonify, request, render_template, redirect, url_for
+from flask import jsonify, request, render_template
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
 from utils.image_processing import start_background_processing
 from utils.progress import get_progress_data
-from utils.mock_data import get_results_data, get_trash_data
+from utils.mock_data import get_trash_data
 
 def register_routes(app) -> None:
     @app.route("/")
@@ -53,7 +52,7 @@ def register_routes(app) -> None:
         """
         結果ページ。
         """
-        return jsonify(get_results_data())
+        return get_progress_data()
 
     @app.route("/trash", methods=["GET", "POST"])
     def trash() -> str:
