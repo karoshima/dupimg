@@ -1,10 +1,11 @@
 import os
+from typing import List
 from flask import jsonify
 
 # 許可されたディレクトリ
-allowed_directories = []
+allowed_directories: List[str] = []
 
-def set_allowed_directories(directories):
+def set_allowed_directories(directories: List[str]) -> None:
     """
     指定されたディレクトリを絶対パスに変換して保持する関数
     :param directories: 処理対象のディレクトリのリスト
@@ -12,7 +13,7 @@ def set_allowed_directories(directories):
     global allowed_directories
     allowed_directories = [os.path.abspath(directory) for directory in directories]
 
-def list_subdirectories(base_path):
+def list_subdirectories(base_path: str) -> str:
     """
     指定されたパスのサブディレクトリをリストアップする。
     :param base_path: 基準となるディレクトリパス
@@ -39,7 +40,7 @@ def list_subdirectories(base_path):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-def is_directory_allowed(directory):
+def is_directory_allowed(directory) -> bool:
     """
     指定されたディレクトリが許可されたディレクトリ内にあるかを確認する。
     :param directory: 検証対象のディレクトリ

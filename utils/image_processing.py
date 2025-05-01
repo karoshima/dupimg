@@ -1,8 +1,9 @@
 import threading
 import time
+from typing import Any, Dict
 
 # グローバル変数で進捗状況を管理
-progress_data = {
+progress_data: Dict[str, Any] = {
     "time": "",
     "progress": 0,
     "page": "/settings",
@@ -15,14 +16,14 @@ progress_data = {
     ],
 }
 
-def get_progress():
+def get_progress() -> Dict[str, Any]:
     """
     現在の進捗状況を返す。
     """
     global progress_data
     return progress_data
 
-def background_image_processing():
+def background_image_processing() -> None:
     """
     画像探索処理をバックグラウンドで実行する。
     """
@@ -62,7 +63,7 @@ def background_image_processing():
     progress_data["status"] = "完了"
     progress_data["message"] = "画像探索処理が完了しました。"
 
-def start_background_processing():
+def start_background_processing() -> None:
     """
     バックグラウンドで画像探索処理を開始する。
     """
