@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { initialize, showPopup, hidePopup, fetchDirectories } from '../../static/ts/scripts';
+import { initialize, showPopup, hidePopup, fetchDirectories } from '../../static/ts/settings';
 
 describe('ディレクトリ選択機能のテスト', () => {
   let directoryPopup: HTMLDivElement;
