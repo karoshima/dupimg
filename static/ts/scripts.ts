@@ -246,10 +246,9 @@ async function fetchDirectories(path: string, parentElement: HTMLUListElement): 
           try {
             await fetchDirectories(dir.path, subList);
             // await 中に「閉じる」されてなければ、「開く」を無効化する
-            if (!openButton.disabled) {
+            if (openButton.disabled) {
               openButton.textContent = "開く"; // ボタンのテキストをリセット
               openButton.style.display = "none"; // 「開く」ボタンを非表示
-              openButton.disabled = true; // 「開く」ボタンを無効化
             }
           } catch (error) {
             console.error("サブディレクトリの取得中にエラーが発生しました:", error);
