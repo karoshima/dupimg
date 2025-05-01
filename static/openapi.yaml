@@ -136,13 +136,27 @@ paths:
                     description: サーバーの現在時刻
                   progress:
                     type: integer
-                    description: 処理の進捗率（0～100）
+                    description: 全体の進捗率（0～100）
                   status:
                     type: string
                     description: 現在の処理ステータス
                   message:
                     type: string
                     description: 処理の詳細な説明
+                  steps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: ステップ名
+                        progress:
+                          type: integer
+                          description: ステップの進捗率（0～100）
+                        status:
+                          type: string
+                          description: ステップのステータス（未開始、進行中、完了）
 
   /results:
     get:

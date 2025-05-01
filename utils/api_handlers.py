@@ -1,7 +1,8 @@
 import json
 import os
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, redirect, url_for
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
+from utils.image_processing import start_background_processing
 from utils.progress import get_progress_data
 from utils.mock_data import get_results_data, get_trash_data
 
@@ -17,6 +18,7 @@ def register_routes(app):
             algorithm = request.form.get("algorithm")
             similarity = request.form.get("similarity")
             directories = json.loads(directories) if directories else []
+            start_background_processing()
             return jsonify({
                 "status": "success",
                 "directories": directories,

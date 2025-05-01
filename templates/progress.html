@@ -11,14 +11,27 @@
       margin-top: 50px;
     }
     #time {
-      font-size: 2em;
+      font-size: 1.5em;
       color: #333;
+    }
+    .step {
+      margin: 10px 0;
+    }
+    .step .name {
+      font-weight: bold;
+    }
+    .step .progress {
+      color: #555;
     }
   </style>
 </head>
 <body>
   <h1>進捗モニタリング</h1>
   <div id="time">時刻を取得中...</div>
+  <div id="overall-progress">全体進捗: 0%</div>
+  <div id="status">ステータス: 取得中...</div>
+  <div id="message">メッセージ: 取得中...</div>
+  <div id="steps"></div>
   <script src="/static/js/progress.js"></script>
 </body>
 </html>
