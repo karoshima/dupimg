@@ -179,6 +179,45 @@ paths:
                     status:
                       type: string
 
+paths:
+  /api/image:
+    get:
+      summary: 画像を取得
+      description: 指定されたパスの画像を返します。
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: 画像ファイルの絶対パス
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 画像ファイル
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: ファイルが見つからない場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: サーバーエラー
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
   /trash:
     get:
       summary: ごみ箱の内容を取得

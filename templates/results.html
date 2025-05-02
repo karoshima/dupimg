@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>類似画像の比較</title>
+  <style>
+    .group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      border: 3px solid #ccc;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .image-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      border: 1px solid #ccc;
+      padding: 5px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+      margin-bottom: 10px;
+    }
+    .image-item img {
+      width: auto;
+      height: 128px;
+      margin-right: 10px;
+    }
+    .image-info {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>類似画像の比較</h1>
+  <div id="groups-container"></div>
+
+  <!-- TypeScript でコンパイルされた JavaScript を読み込む -->
+  <script src="/static/js/results.js" defer></script>
+</body>
+</html>

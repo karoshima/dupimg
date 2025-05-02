@@ -1,6 +1,7 @@
 import json
+import mimetypes
 import os
-from flask import jsonify, request, render_template
+from flask import jsonify, request, render_template, send_file
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
 from utils.image_processing import start_background_processing
 from utils.progress import get_progress_data
@@ -52,7 +53,7 @@ def register_routes(app) -> None:
         """
         結果ページ。
         """
-        return get_progress_data()
+        return render_template("results.html")
 
     @app.route("/trash", methods=["GET", "POST"])
     def trash() -> str:
@@ -90,6 +91,23 @@ def register_routes(app) -> None:
 
         # 許可されたディレクトリの場合の処理（例: ディレクトリをリストに追加）
         return jsonify({"status": "success", "message": "ディレクトリが追加されました。"})
+
+    @app.route("/api/image", methods=["GET"])
+    def get_image():
+        """
+        指定された画像ファイルを返すエンドポイント。
+        """
+        image_path = request.args.get("path")
+        if not image_path or not os.path.exists(image_path):
+            return jsonify({"error": "Invalid or missing image path"}), 404
+
+        mime_type, _ = mimetypes.guess_type(image_path)
+        if not mime_type:
+            mime_type = "application/octet-stream"
+        try:
+            return send_file(image_path, mimetype=mime_type)
+        except Exception as e:
+            return jsonify({"error": f"Failed to load image: {str(e)}"}), 500
 
     @app.route("/openapi.yaml")
     def openapi() -> str:
