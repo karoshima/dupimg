@@ -49,18 +49,19 @@ class ImageFile:
             return
         self.disabled = False
         self.date = None
-        exif_data = img._getexif()
-        if exif_data:
-            date_str = exif_data.get(36867) or exif_data.get(306)
-            if date_str:
-                for fmt in [ "%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
-                    try:
-                        self.date = datetime.strptime(date_str, fmt)
-                        break
-                    except ValueError:
-                        continue
-                else:
-                    print(f"Unsupported date format in {path}: {date_str}")
+        if hasattr(img, '_getexif'):
+            exif_data = img._getexif()
+            if exif_data:
+                date_str = exif_data.get(36867) or exif_data.get(306)
+                if date_str:
+                    for fmt in [ "%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
+                        try:
+                            self.date = datetime.strptime(date_str, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        print(f"Unsupported date format in {path}: {date_str}")
         if not self.date:
             self.date = datetime.fromtimestamp(os.path.getctime(path))
         self.inode = os.stat(path).st_ino
