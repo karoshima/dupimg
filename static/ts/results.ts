@@ -34,6 +34,9 @@ async function fetchAndDisplayGroups(): Promise<void> {
       group.forEach(image => {
         const imageItem = document.createElement("div");
         imageItem.className = "image-item";
+        imageItem.draggable = true; // ドラッグ可能にする
+        imageItem.dataset.imageId = image.paths[0]; // 画像のIDをデータ属性に保存
+        imageItem.dataset.groupId = groupIndex.toString(); // グループのIDをデータ属性に保存
 
         imageItem.innerHTML = `
           <img
@@ -49,6 +52,78 @@ async function fetchAndDisplayGroups(): Promise<void> {
           </div>
         `;
 
+        // ドラッグイベントを追加
+        imageItem.addEventListener("dragstart", (event) => {
+          event.dataTransfer?.setData("imageId", imageItem.dataset.imageId!);
+          event.dataTransfer?.setData("groupId", imageItem.dataset.groupId!);
+        });
+        imageItem.addEventListener("dragover", (event) => {
+          event.preventDefault(); // ドロップを許可
+        });
+        imageItem.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          // 既存の選択メニューを削除する
+          const existingMenu = document.querySelector(".action-menu");
+          if (existingMenu) {
+            document.body.removeChild(existingMenu);
+          }
+          // ドロップ元とドロップ先の情報を確認する
+          const sourcePath = event.dataTransfer?.getData("imageId");
+          const sourceGroupId = event.dataTransfer?.getData("groupId");
+          const targetPath = image.paths[0];
+          const targetGroupId = groupIndex.toString();
+          if (sourcePath && targetPath && sourcePath !== targetPath && sourceGroupId === targetGroupId) {
+            // 選択メニューを作成する
+            const actionMenu = document.createElement("div");
+            actionMenu.className = "action-menu";
+            actionMenu.innerHTML = `
+              <label for="action-select">アクションを選択してください:</label>
+              <select id="action-select">
+                <option value="copy_date">日付のコピー</option>
+                <option value="hardlink_image">ハードリンクによる置き換え</option>
+                <option value="copy_image">コピーによる置き換え</option>
+              </select>
+              <button id="action-confirm">実行</button>
+              <button id="action-cancel">キャンセル</button>
+            `;
+            document.body.appendChild(actionMenu);
+            // 選択メニューの位置を調整する
+            actionMenu.style.position = "absolute";
+            actionMenu.style.top = `${event.clientY}px`;
+            actionMenu.style.left = `${event.clientX}px`;
+            // 実行ボタンのクリックイベント
+            const confirmButton = actionMenu.querySelector("#action-confirm")!;
+            confirmButton.addEventListener("click", async () => {
+              const action = (actionMenu.querySelector("#action-select") as HTMLSelectElement).value;
+              // バックエンドにリクエストを送信する
+              const response = await fetch("/api/handle_drag_drop", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  source: sourcePath,
+                  target: targetPath,
+                  action: action,
+                })
+              });
+              if (response.ok) {
+                // 成功したら結果を取得しなおす
+                fetchAndDisplayGroups();
+              } else {
+                console.log("ドラッグ＆ドロップの処理に失敗しました:", response.statusText);
+              }
+              // アクションメニューを削除
+              document.body.removeChild(actionMenu);
+            });
+            // キャンセルボタンのクリックイベント
+            const cancelButton = actionMenu.querySelector("#action-cancel")!;
+            cancelButton.addEventListener("click", () => {
+              // アクションメニューを削除
+              document.body.removeChild(actionMenu);
+            });
+          }
+        });
         // クリックイベントを追加
         const imgElement = imageItem.querySelector("img")!;
         imgElement.addEventListener("click", () => toggleImage(imgElement));

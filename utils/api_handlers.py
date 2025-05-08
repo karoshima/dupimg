@@ -3,7 +3,7 @@ import mimetypes
 import os
 from flask import jsonify, request, render_template, send_file
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
-from utils.image_processing import start_background_processing
+from utils.image_processing import start_background_processing, handle_drag_drop_action
 from utils.progress import get_progress_data
 from utils.mock_data import get_trash_data
 
@@ -108,6 +108,27 @@ def register_routes(app) -> None:
             return send_file(image_path, mimetype=mime_type)
         except Exception as e:
             return jsonify({"error": f"Failed to load image: {str(e)}"}), 500
+
+    @app.route("/api/handle_drag_drop", methods=["POST"])
+    def handle_drag_drop():
+        """
+        ドラッグ＆ドロップのアクションを処理するエンドポイント。
+        """
+        data = request.json
+        source = data.get("source")
+        target = data.get("target")
+        action = data.get("action")
+
+        if not source or not target or not action:
+            return jsonify({"error": "Invalid parameters"}), 400
+
+        # `image_processing.py` の関数を呼び出して処理を実行
+        success, message = handle_drag_drop_action(source, target, action)
+
+        if success:
+            return jsonify({"status": "success", "message": message})
+        else:
+            return jsonify({"status": "error", "message": message}), 400
 
     @app.route("/openapi.yaml")
     def openapi() -> str:
