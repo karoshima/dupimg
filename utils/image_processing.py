@@ -37,7 +37,7 @@ class ImageFile:
     画像ファイルに関する様々なを表すクラス。
     """
     def __init__(self, path: str) -> None:
-        self.path: str = path
+        self.paths: List[str] = [path]
         self.size: int = os.path.getsize(path)
         self.disabled: bool = True
         self.hash: imagehash.ImageHash = None
@@ -80,23 +80,23 @@ class ImageFile:
         """
         thumbnail = ""
         try:
-            with Image.open(self.path) as img:
+            with Image.open(self.paths[0]) as img:
                 img.thumbnail((128, 128))
                 buffer = BytesIO()
                 img.save(buffer, format="PNG")
                 thumbnail = base64.b64encode(buffer.getvalue()).decode('utf-8')
         except Exception as e:
-            print(f"Error generating thumbnail for {self.path}: {e}")
+            print(f"Error generating thumbnail for {self.path[0]}: {e}")
 
         return {
-            "path": self.path,
+            "paths": self.paths,
             "size": self.size,
             "date": self.date.strftime('%Y/%m/%d %H:%M:%S'),
             "thumbnail": thumbnail
         }
 
     def __repr__(self) -> str:
-        return f"ImageFile({self.path})"
+        return f"ImageFile({self.paths}, size={self.size}, hash={self.hash}, date={self.date})"
 
 def background_image_processing(directory: List[str], algorithm: str, similarity: str) -> None:
     """
@@ -146,6 +146,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
     for index, img in enumerate(images):
         # 既にハードリンクされたファイルはスキップ
         if img.inode in inode_map:
+            inode_map[img.inode].paths.extend(img.paths)
             continue
         inode_map[img.inode] = img
         # 既存のグループに追加するか新規のグループを作るか判定する
@@ -161,7 +162,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
     progress_data["steps"][2]["status"] = "完了"
 
     # 重複画像のあるグループのみをリストに登録する
-    progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1, group_list)))
+    progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
     progress_data["message"] = f"画像探索処理が完了しました。イメージ数 {len(images)} 件、グループ数 {len(group_list)} 件、重複のあるグループは {len(progress_data["group_list"])} 件。"
     # 全体の進捗を完了に設定
     progress_data["progress"] = 100

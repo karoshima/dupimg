@@ -8,7 +8,7 @@ async function fetchAndDisplayGroups(): Promise<void> {
     }
 
     const data = await response.json();
-    const groupList: { path: string; size: number; date: string, thumbnail: string }[][] = data.group_list;
+    const groupList: { paths: string[]; size: number; date: string, thumbnail: string }[][] = data.group_list;
 
     // グループを表示するコンテナ
     const container = document.getElementById("groups-container")!;
@@ -16,6 +16,10 @@ async function fetchAndDisplayGroups(): Promise<void> {
 
     groupList.forEach((group, groupIndex) => {
       const groupDiv = document.createElement("div");
+      groupDiv.className = "group";
+      if (group.length === 1) {
+        groupDiv.style.opacity = "0.5"; // グループが1つだけの場合薄暗くする
+      }
       groupDiv.className = "group";
       groupDiv.innerHTML = `<h2>グループ ${groupIndex + 1}</h2>`;
 
@@ -28,10 +32,10 @@ async function fetchAndDisplayGroups(): Promise<void> {
             src="data:image/jpeg;base64,${image.thumbnail}" alt="サムネイル"
             style="cursor: pointer;"
             src-thumbnail="data:image/jpeg;base64,${image.thumbnail}" 
-            src-real="/api/image?path=${encodeURIComponent(image.path)}"
+            src-real="/api/image?path=${encodeURIComponent(image.paths[0])}"
           >
           <div class="image-info">
-            <p>パス: ${image.path}</p>
+            <ul>${image.paths.map(path => `<li>${path}</li>`).join("")}</ul>
             <p>サイズ: ${image.size} bytes</p>
             <p>日付: ${image.date}</p>
           </div>
