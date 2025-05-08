@@ -3,10 +3,44 @@ from copy import deepcopy
 import imagehash
 import os
 import threading
+import traceback
 from datetime import datetime
 from io import BytesIO
 from typing import List, Any, Dict
 from PIL import Image
+
+hardlink_ability_table: Dict[int, bool] = {}
+
+def hardlink_ability(path: str, dev: int) -> bool:
+    """
+    ハードリンクの作成が可能かどうかを確認する。
+    :param path: ファイルパス
+    :param dev: デバイス番号
+    :return: ハードリンクの作成が可能ならTrue、そうでなければFalse
+    """
+    if dev in hardlink_ability_table:
+        return hardlink_ability_table[dev]
+    # キャッシュがなければ実地調査する
+    if not os.path.exists(path):
+        # 判定不能
+        return False
+    # ハードリンクの作成を試みた結果を返す
+    # 返り値は hardlink_ability_table にキャッシュする
+    testpath = path + ".test"
+    try:
+        os.link(path, testpath)
+        os.remove(testpath)
+        hardlink_ability_table[dev] = True
+        return True
+    except OSError:
+        hardlink_ability_table[dev] = False
+    except Exception as e:
+        print(f"Cache create for device {dev}: {hardlink_ability_table}")
+        hardlink_ability_table[dev] = False
+        # 例外が発生した場合はハードリンクの作成ができないとみなす
+        # ただし、例外の内容によっては True を返すこともあるかもしれないので注意
+        # ここでは False を返す
+    return False
 
 class ImageFile:
     """
@@ -20,6 +54,8 @@ class ImageFile:
         self.exifdate: datetime.datetime = None
         self.filedate: datetime.datetime = None
         self.inode: int = None
+        self.hardlink_ability: bool = False
+        self.device: int = None
         self.group: List[ImageFile] = None
 
         img: Image.Image = None
@@ -47,7 +83,9 @@ class ImageFile:
             else:
                 print(f"Unsupported date format in {path}: {date_str}")
         self.filedate = datetime.fromtimestamp(os.path.getmtime(path))
+        self.device = os.stat(path).st_dev
         self.inode = os.stat(path).st_ino
+        self.hardlink_ability = hardlink_ability(path, self.device)
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -61,13 +99,15 @@ class ImageFile:
                 img.save(buffer, format="PNG")
                 thumbnail = base64.b64encode(buffer.getvalue()).decode('utf-8')
         except Exception as e:
-            print(f"Error generating thumbnail for {self.path[0]}: {e}")
+            print(f"Error generating thumbnail for {self.paths[0]}: {e}")
 
         return {
             "paths": self.paths,
             "size": self.size,
             "date": (self.exifdate or self.filedate).strftime('%Y/%m/%d %H:%M:%S'),
             "dateType": "exif" if self.exifdate else "file",
+            "hardlink_ability": self.hardlink_ability,
+            "device": self.device,
             "thumbnail": thumbnail
         }
 
@@ -145,6 +185,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
             progress_data["steps"][1]["progress"] = ((index + 1) * 10000 // len(image_files)) / 100
             progress_data["message"] = f"ハッシュ計算中: {index + 1}/{len(image_files)}"
         except Exception as e:
+            traceback.print_exc()
             print(f"Error processing image {file_path}: {e}")
     progress_data["steps"][1]["status"] = "完了"
 
@@ -190,6 +231,71 @@ def start_background_processing(directory: List[str], algorithm: str, similarity
     thread = threading.Thread(target=background_image_processing, args=(directory, algorithm, similarity))
     thread.start()
 
+def replace_with_hardlink(source: ImageFile, target: ImageFile) -> tuple[bool, str]:
+    """
+    ソース画像をターゲット画像のハードリンクで置き換える。
+    :param source: ソース画像
+    :param target: ターゲット画像
+    :return: 成功したかどうかとメッセージ
+    """
+    # source がちゃんとあることを確認する
+    if not os.path.exists(source.paths[0]):
+        return False, f"Source image {source.paths[0]} does not exist."
+    # source から target にハードリンクできることを確認する
+    if not target.hardlink_ability:
+        return False, f"Target image {target.paths[0]} cannot be hardlinked."
+    if source.device != target.device:
+        return False, f"Source and target images are on different devices: {source.device} and {target.device}."
+
+    msg: str = "" # エラーメッセージ
+    replacedpath: List[str] = [] # 上書き成功したファイル
+    failedpath: List[str] = [] # 上書き失敗したファイル
+
+    # ターゲットの各パスに対して、ハードリンクによる置き換えを行なう
+    for path in target.paths: 
+        print(f"Replacing {path} with hardlink to {source.paths[0]}")
+        if not os.path.exists(path):
+            print(f"Target image {path} does not exist.")
+            msg += f"Target image {path} does not exist."
+            continue
+        # 置き換え失敗に備えてバックアップを作成する
+        save_path = path + ".bak"
+        while os.path.exists(save_path):
+            save_path = save_path + "_"
+        try:
+            os.rename(path, save_path)
+        except OSError as e:
+            print(f"Error creating backup {path} to {save_path}: {e}")
+            msg += f"Error creating backup {path} to {save_path}: {e}"
+            failedpath.append(path)
+            continue
+        # ハードリンクで置き換える
+        try:
+            os.link(source.paths[0], path)
+        except OSError as e:
+            print(f"Error creating hardlink from {source.paths[0]} to {path}: {e}")
+            msg += f"Error creating hardlink from {source.paths[0]} to {path}: {e}"
+            failedpath.append(path)
+            # 失敗につき、バックアップを戻す
+            try:
+                os.rename(save_path, path)
+            except OSError as e:
+                print(f"Error restoring backup {save_path} to {path}: {e}")
+                msg += f"Error restoring backup {save_path} to {path}: {e}"
+            continue
+        # ハードリンクの作成に成功したので、バックアップを削除する
+        try:
+            os.remove(save_path)
+        except OSError as e:
+            print(f"Error removing backup {save_path}: {e}")
+            msg += f"Error removing backup {save_path}: {e}"
+        replacedpath.append(path)
+        source.paths.append(path)
+        print(f"Replaced {path} with hardlink to {source.paths[0]}")
+    target.paths = failedpath
+    print(f"Target paths after replacement: {target.paths}")
+    return True, f"Replaced {replacedpath} with hardlink to {source.paths[0]}."
+ 
 def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool, str]:
     """
     ドラッグ＆ドロップのアクションを処理する。
@@ -231,12 +337,16 @@ def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool
         return True, "Date copied successfully."
     elif action == "hardlink_image":
         # ターゲットをソースのハードリンクで置き換える
-        source_image.paths.extend(target_image.paths)
-        target_image.group.remove(target_image)
-        print(f"TODO: Replace {target} with hardlink to {source}.")
+        result, msg = replace_with_hardlink(source_image, target_image)
+        if len(target_image.paths) == 0:
+            # ソースのパスが空になった場合、ソースをグループから削除
+            target_image.group.remove(target_image)
         progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
-        progress_data["message"] = f"{source} を {target} のハードリンクに置き換えました。"
-        return True, "Target replaced with hardlink successfully."
+        if result:
+            progress_data["message"] = f"{source} を {target} のハードリンクに置き換えました。"
+        else:
+            progress_data["message"] = f"{source} を {target} のハードリンクに置き換えられませんでした。{msg}"
+        return result, msg
     elif action == "copy_image":
         # ターゲットをソースのコピーで置き換える
         print(f"TODO: Replace {target} with copy to {source}.")
