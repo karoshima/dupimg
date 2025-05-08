@@ -6,13 +6,19 @@
   <title>類似画像の比較</title>
   <style>
     .group {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
       margin-bottom: 20px;
       border: 3px solid #ccc;
       padding: 10px;
       border-radius: 5px;
+    }
+    .group-title {
+      margin-bottom: 10px; /* タイトルと画像の間に余白を追加 */
+    }
+    .images-row {
+      display: flex;
+      flex-wrap: wrap; /* 横並びで折り返し可能にする */
+      gap: 10px; /* 各画像間の余白 */
+      margin-top: 10px; /* タイトルとの間に余白を追加 */
     }
     .image-item {
       display: flex;

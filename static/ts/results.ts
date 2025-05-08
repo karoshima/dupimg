@@ -20,9 +20,17 @@ async function fetchAndDisplayGroups(): Promise<void> {
       if (group.length === 1) {
         groupDiv.style.opacity = "0.5"; // グループが1つだけの場合薄暗くする
       }
-      groupDiv.className = "group";
-      groupDiv.innerHTML = `<h2>グループ ${groupIndex + 1}</h2>`;
+      // グループのタイトルを作成
+      const groupTitle = document.createElement("div");
+      groupTitle.className = "group-title";
+      const groupTitleText = document.createElement("h2");
+      groupTitleText.textContent = `グループ ${groupIndex + 1}`;
+      groupTitle.appendChild(groupTitleText);
+      groupDiv.appendChild(groupTitle);
 
+      // グループ内の画像を表示
+      const imagesRow = document.createElement("div");
+      imagesRow.className = "images-row";
       group.forEach(image => {
         const imageItem = document.createElement("div");
         imageItem.className = "image-item";
@@ -45,9 +53,10 @@ async function fetchAndDisplayGroups(): Promise<void> {
         const imgElement = imageItem.querySelector("img")!;
         imgElement.addEventListener("click", () => toggleImage(imgElement));
 
-        groupDiv.appendChild(imageItem);
+        imagesRow.appendChild(imageItem);
       });
 
+      groupDiv.appendChild(imagesRow);
       container.appendChild(groupDiv);
     });
   } catch (error) {
