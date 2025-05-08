@@ -163,7 +163,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
 
     # 重複画像のあるグループのみをリストに登録する
     progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
-    progress_data["message"] = f"画像探索処理が完了しました。イメージ数 {len(images)} 件、グループ数 {len(group_list)} 件、重複のあるグループは {len(progress_data["group_list"])} 件。"
+    progress_data["message"] = f"画像探索処理が完了しました。イメージ数 {len(images)} 件、グループ数 {len(group_list)} 件、重複のあるグループは {len(progress_data['group_list'])} 件。"
     # 全体の進捗を完了に設定
     progress_data["progress"] = 100
     progress_data["page"] = "/results"
