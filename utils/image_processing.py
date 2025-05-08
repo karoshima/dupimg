@@ -4,6 +4,7 @@ import imagehash
 import os
 import threading
 import traceback
+import shutil
 from datetime import datetime
 from io import BytesIO
 from typing import List, Any, Dict
@@ -295,7 +296,29 @@ def replace_with_hardlink(source: ImageFile, target: ImageFile) -> tuple[bool, s
     target.paths = failedpath
     print(f"Target paths after replacement: {target.paths}")
     return True, f"Replaced {replacedpath} with hardlink to {source.paths[0]}."
- 
+
+def replace_with_copy(source: ImageFile, target: ImageFile) -> tuple[bool, str]:
+    """
+    ソース画像をターゲット画像のコピーで置き換える。
+    :param source: ソース画像
+    :param target: ターゲット画像
+    :return: 成功したかどうかとメッセージ
+    """
+    # ターゲットのパス[0]に対して、コピーによる置き換えを行なう
+    try:
+        shutil.copy2(source.paths[0], target.paths[0])
+    except FileNotFoundError as e:
+        return False, f"Source image {source.paths[0]} does not exist."
+    except PermissionError as e:
+        return False, f"Permission denied: {e}"
+    except shutil.SameFileError as e:
+        return False, f"Source and target are the same file: {e}"
+    except Exception as e:
+        return False, f"Error copying {source.paths[0]} to {target.paths[0]}: {e}"
+    copied = ImageFile(target.paths.pop(0))
+    target.group.append(copied)
+    return replace_with_hardlink(copied, target)
+
 def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool, str]:
     """
     ドラッグ＆ドロップのアクションを処理する。
