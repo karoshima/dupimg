@@ -95,8 +95,8 @@ async function fetchAndDisplayGroups(): Promise<void> {
             document.body.appendChild(actionMenu);
             // 選択メニューの位置を調整する
             actionMenu.style.position = "absolute";
-            actionMenu.style.top = `${event.clientY}px`;
-            actionMenu.style.left = `${event.clientX}px`;
+            actionMenu.style.top = `${event.pageY}px`;
+            actionMenu.style.left = `${event.pageX}px`;
             // 実行ボタンのクリックイベント
             const confirmButton = actionMenu.querySelector("#action-confirm")!;
             confirmButton.addEventListener("click", async () => {
