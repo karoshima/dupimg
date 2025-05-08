@@ -76,58 +76,54 @@ async function fetchAndDisplayGroups(): Promise<void> {
             // 選択メニューを作成する
             const actionMenu = document.createElement("div");
             actionMenu.className = "action-menu";
-            const dateCopyOption = image.dateType === "exif"
-              ? `<option value="copy_date" disabled>日付のコピー (EXIF情報のため無効)</option>`
-              : `<option value="copy_date">日付のコピー</option>`;
-              const hardlinkOption = (image.hardlink_ability && image.device === group[0].device)
-              ? `<option value="hardlink_image">ハードリンクによる置き換え</option>`
-              : `<option value="hardlink_image" disabled>ハードリンクによる置き換え (デバイスが異なるため無効)</option>`;
-            actionMenu.innerHTML = `
-              <label for="action-select">アクションを選択してください:</label>
-              <select id="action-select">
-                ${dateCopyOption}
-                ${hardlinkOption}
-                <option value="copy_image">コピーによる置き換え</option>
-              </select>
-              <button id="action-confirm">実行</button>
-              <button id="action-cancel">キャンセル</button>
-            `;
+            actionMenu.style.display = "flex";
+            actionMenu.style.flexDirection = "column";
+            // 各アクションのボタンを作成する
+            const dateCopyButton = document.createElement("button");
+            dateCopyButton.textContent = "日付のコピー";
+            dateCopyButton.disabled = image.dateType === "exif"; // EXIF情報の場合は無効
+            dateCopyButton.addEventListener("click", async () => {
+              await executeAction("copy_date", sourcePath, targetPath);
+              document.body.removeChild(actionMenu);
+            });
+            const hardlinkButton = document.createElement("button");
+            hardlinkButton.textContent = "ハードリンクによる置き換え";
+            hardlinkButton.disabled = !(image.hardlink_ability && image.device === group[0].device); // デバイスが異なる場合は無効
+            hardlinkButton.addEventListener("click", async () => {
+              await executeAction("hardlink_image", sourcePath, targetPath);
+              document.body.removeChild(actionMenu);
+            });
+            const copyButton = document.createElement("button");
+            copyButton.textContent = "コピーによる置き換え";
+            copyButton.addEventListener("click", async () => {
+              await executeAction("copy_image", sourcePath, targetPath);
+              document.body.removeChild(actionMenu);
+            });
+            const cancelButton = document.createElement("button");
+            cancelButton.textContent = "キャンセル";
+            cancelButton.addEventListener("click", () => {
+              document.body.removeChild(actionMenu);
+            });
+            // 選択メニューにボタンを追加する
+            actionMenu.appendChild(dateCopyButton);
+            actionMenu.appendChild(hardlinkButton);
+            actionMenu.appendChild(copyButton);
+            actionMenu.appendChild(cancelButton);
+
+            // 選択メニューを表示する
             document.body.appendChild(actionMenu);
-            // 選択メニューの位置を調整する
             actionMenu.style.position = "absolute";
             actionMenu.style.top = `${event.pageY}px`;
             actionMenu.style.left = `${event.pageX}px`;
-            // 実行ボタンのクリックイベント
-            const confirmButton = actionMenu.querySelector("#action-confirm")!;
-            confirmButton.addEventListener("click", async () => {
-              const action = (actionMenu.querySelector("#action-select") as HTMLSelectElement).value;
-              // バックエンドにリクエストを送信する
-              const response = await fetch("/api/handle_drag_drop", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  source: sourcePath,
-                  target: targetPath,
-                  action: action,
-                })
-              });
-              if (response.ok) {
-                // 成功したら結果を取得しなおす
-                fetchAndDisplayGroups();
-              } else {
-                console.log("ドラッグ＆ドロップの処理に失敗しました:", response.statusText);
+
+            // ESC キーでもキャンセルする
+            const escKeyListener = (event: KeyboardEvent) => {
+              if (event.key === "Escape") {
+                document.body.removeChild(actionMenu);
+                document.removeEventListener("keydown", escKeyListener);
               }
-              // アクションメニューを削除
-              document.body.removeChild(actionMenu);
-            });
-            // キャンセルボタンのクリックイベント
-            const cancelButton = actionMenu.querySelector("#action-cancel")!;
-            cancelButton.addEventListener("click", () => {
-              // アクションメニューを削除
-              document.body.removeChild(actionMenu);
-            });
+            };
+            document.addEventListener("keydown", escKeyListener);
           }
         });
         // クリックイベントを追加
@@ -142,6 +138,28 @@ async function fetchAndDisplayGroups(): Promise<void> {
     });
   } catch (error) {
     console.error("グループデータの取得中にエラーが発生しました:", error);
+  }
+}
+
+// 選択したアクションを実行する
+async function executeAction(action: string, sourcePath: string, targetPath: string): Promise<void> {
+  const response = await fetch("/api/handle_drag_drop", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: action,
+      source: sourcePath,
+      target: targetPath,
+    }),
+  });
+
+  if (response.ok) {
+    // 成功したら結果を取得しなおす
+    fetchAndDisplayGroups();
+  } else {
+    console.error("アクションの実行中にエラーが発生しました:", response.statusText);
   }
 }
 
