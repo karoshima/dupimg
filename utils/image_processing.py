@@ -17,7 +17,8 @@ class ImageFile:
         self.size: int = os.path.getsize(path)
         self.disabled: bool = True
         self.hash: imagehash.ImageHash = None
-        self.date: int = None
+        self.exifdate: datetime.datetime = None
+        self.filedate: datetime.datetime = None
         self.inode: int = None
         self.group: List[ImageFile] = None
 
@@ -33,22 +34,19 @@ class ImageFile:
             print(f"Error calculating hash for image {path}: {e}")
             return
         self.disabled = False
-        self.date = None
-        if hasattr(img, '_getexif'):
-            exif_data = img._getexif()
-            if exif_data:
-                date_str = exif_data.get(36867) or exif_data.get(306)
-                if date_str:
-                    for fmt in [ "%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
-                        try:
-                            self.date = datetime.strptime(date_str, fmt)
-                            break
-                        except ValueError:
-                            continue
-                    else:
-                        print(f"Unsupported date format in {path}: {date_str}")
-        if not self.date:
-            self.date = datetime.fromtimestamp(os.path.getctime(path))
+        self.exifdate = None
+        exif_data = img.getexif()
+        date_str = exif_data.get(36867) or exif_data.get(306)
+        if date_str:
+            for fmt in [ "%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
+                try:
+                    self.exifdate = datetime.strptime(date_str, fmt)
+                    break
+                except ValueError:
+                    continue
+            else:
+                print(f"Unsupported date format in {path}: {date_str}")
+        self.filedate = datetime.fromtimestamp(os.path.getmtime(path))
         self.inode = os.stat(path).st_ino
 
     def to_dict(self) -> Dict[str, Any]:
@@ -68,12 +66,13 @@ class ImageFile:
         return {
             "paths": self.paths,
             "size": self.size,
-            "date": self.date.strftime('%Y/%m/%d %H:%M:%S'),
+            "date": (self.exifdate or self.filedate).strftime('%Y/%m/%d %H:%M:%S'),
+            "dateType": "exif" if self.exifdate else "file",
             "thumbnail": thumbnail
         }
 
     def __repr__(self) -> str:
-        return f"ImageFile({self.paths}, size={self.size}, hash={self.hash}, date={self.date})"
+        return f"ImageFile({self.paths}, size={self.size}, hash={self.hash}, date={self.exifdate or self.filedate}({'exif' if self.exifdate else 'file'}), inode={self.inode})"
 
 # グローバル変数で進捗状況を管理
 progress_init: Dict[str, Any] = {
@@ -222,8 +221,11 @@ def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool
 
     if action == "copy_date":
         # ソースの日時をターゲットにコピーする
-        print(f"TODO: Copy date from {source} to {target}.")
-        target_image.date = source_image.date
+        if target_image.exifdate:
+            return False, "Target image already has EXIF date."
+        new_date = (source_image.exifdate or source_image.filedate).timestamp()
+        os.utime(target_image.paths[0], (new_date, new_date))
+        target_image.filedate = source_image.exifdate or source_image.filedate
         progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
         progress_data["message"] = f"{source} の日付を {target} に揃えました。"
         return True, "Date copied successfully."
@@ -240,7 +242,8 @@ def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool
         print(f"TODO: Replace {target} with copy to {source}.")
         target_image.size = source_image.size
         target_image.hash = source_image.hash
-        target_image.date = source_image.date
+        target_image.exifdate = source_image.exifdate
+        target_image.filedate = source_image.filedate
         progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
         progress_data["message"] = f"{source} を {target} のコピーで置き換えました。"
         return True, "Target replaced with copy successfully."

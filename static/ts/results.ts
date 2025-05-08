@@ -8,7 +8,7 @@ async function fetchAndDisplayGroups(): Promise<void> {
     }
 
     const data = await response.json();
-    const groupList: { paths: string[]; size: number; date: string, thumbnail: string }[][] = data.group_list;
+    const groupList: { paths: string[]; size: number; date: string, dateType: string, thumbnail: string }[][] = data.group_list;
 
     // グループを表示するコンテナ
     const container = document.getElementById("groups-container")!;
@@ -48,7 +48,7 @@ async function fetchAndDisplayGroups(): Promise<void> {
           <div class="image-info">
             <ul>${image.paths.map(path => `<li>${path}</li>`).join("")}</ul>
             <p>サイズ: ${image.size} bytes</p>
-            <p>日付: ${image.date}</p>
+            <p>日付: ${image.date} ${image.dateType === "exif" ? "(EXIF情報/更新不可)" : ""}</p>
           </div>
         `;
 
@@ -76,10 +76,13 @@ async function fetchAndDisplayGroups(): Promise<void> {
             // 選択メニューを作成する
             const actionMenu = document.createElement("div");
             actionMenu.className = "action-menu";
+            const dateCopyOption = image.dateType === "exif"
+              ? `<option value="copy_date" disabled>日付のコピー (EXIF情報のため無効)</option>`
+              : `<option value="copy_date">日付のコピー</option>`;
             actionMenu.innerHTML = `
               <label for="action-select">アクションを選択してください:</label>
               <select id="action-select">
-                <option value="copy_date">日付のコピー</option>
+                ${dateCopyOption}
                 <option value="hardlink_image">ハードリンクによる置き換え</option>
                 <option value="copy_image">コピーによる置き換え</option>
               </select>
