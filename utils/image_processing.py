@@ -118,8 +118,8 @@ class ImageFile:
 
 # グローバル変数で進捗状況を管理
 progress_init: Dict[str, Any] = {
-        "time": "",
-        "progress": 0,
+        "current_time": "",
+        "elapsed_time": "",
         "page": "/settings",
         "status": "未開始",
         "message": "",
@@ -132,6 +132,8 @@ progress_init: Dict[str, Any] = {
     }
 
 progress_data: Dict[str, Any] = deepcopy(progress_init)
+start_time: datetime = None
+finish_time: datetime = None
 paths: Dict[str, ImageFile] = {}
 inode_map: Dict[int, ImageFile] = {}
 group_list: List[List[ImageFile]] = []
@@ -141,7 +143,20 @@ def get_progress() -> Dict[str, Any]:
     現在の進捗状況を返す。
     """
     global progress_data
-    progress_data["time"] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    global start_time
+    global finish_time
+
+    elapsed_time = ((finish_time or datetime.now()) - start_time).total_seconds() if start_time else 0
+    days, rem = divmod(elapsed_time, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+    daystr = f"{int(days)}日 " if days > 0 else ""
+    hourstr = f"{int(hours)}時間 " if hours > 0 or days > 0 else ""
+    minutestr = f"{int(minutes)}分 " if minutes > 0 or hours > 0 or days > 0 else ""
+    secondstr = f"{seconds}秒"
+    progress_data["current_time"] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
+    progress_data["elapsed_time"] = daystr + hourstr + minutestr + secondstr
+    print(f"start_time: {start_time}, finish_time: {finish_time}, elapsed_time: {progress_data['elapsed_time']}")
     return progress_data
 
 @profile
@@ -150,12 +165,16 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
     画像探索処理をバックグラウンドで実行する。
     """
     global progress_data
+    global start_time
+    global finish_time
     global paths
     global inode_map
     global group_list
 
     # ステップ 1: 画像ファイルの一覧作成
     progress_data = deepcopy(progress_init)
+    start_time = datetime.now()
+    finish_time = None
     paths = {}
     inode_map = {}
     group_list = []
@@ -226,6 +245,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
     progress_data["progress"] = 100
     progress_data["page"] = "/results"
     progress_data["status"] = "完了"
+    finish_time = datetime.now()
 
 def start_background_processing(directory: List[str], algorithm: str, similarity: str) -> None:
     """

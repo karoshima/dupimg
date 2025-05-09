@@ -10,9 +10,13 @@
       text-align: center;
       margin-top: 50px;
     }
-    #time {
+    #current-time {
       font-size: 1.5em;
       color: #333;
+    }
+    #elapsed-time {
+      font-size: 1.2em;
+      color: #666;
     }
     .step {
       margin: 10px 0;
@@ -28,8 +32,8 @@
 </head>
 <body>
   <h1>進捗モニタリング</h1>
-  <div id="time">時刻を取得中...</div>
-  <div id="overall-progress">全体進捗: 0%</div>
+  <div id="current-time">現在時刻: 取得中...</div>
+  <div id="elapsed-time">経過時間: 取得中...</div>
   <div id="status">ステータス: 取得中...</div>
   <div id="message">メッセージ: 取得中...</div>
   <div id="steps"></div>

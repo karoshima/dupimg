@@ -11,8 +11,8 @@ async function fetchProgressData(): Promise<void> {
       window.location.href = data.page;
     }
     // 全体の進捗を表示
-    document.getElementById("time")!.textContent = `現在時刻: ${data.time}`;
-    document.getElementById("overall-progress")!.textContent = `全体進捗: ${data.progress}%`;
+    document.getElementById("current-time")!.textContent = `現在時刻: ${data.current_time}`;
+    document.getElementById("elapsed-time")!.textContent = `経過時間: ${data.elapsed_time}`;
     document.getElementById("status")!.textContent = `ステータス: ${data.status}`;
     document.getElementById("message")!.textContent = `メッセージ: ${data.message}`;
 

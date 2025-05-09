@@ -10,6 +10,9 @@ async function fetchAndDisplayGroups(): Promise<void> {
     const data = await response.json();
     const groupList: { paths: string[]; size: number; date: string, dateType: string, hardlink_ability: boolean, device: number, thumbnail: string }[][] = data.group_list;
 
+    // 所要時間を表示する
+    document.getElementById("elapsed-time")!.textContent = `経過時間: ${data.elapsed_time}`;
+
     // グループを表示するコンテナ
     const container = document.getElementById("groups-container")!;
     container.innerHTML = ""; // 既存の内容をクリア
