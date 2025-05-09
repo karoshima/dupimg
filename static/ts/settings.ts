@@ -29,7 +29,7 @@ function isSubdirectoryOfAny(dir: string, directories: string[]): boolean {
 document.addEventListener("DOMContentLoaded", () => {
   const settingsForm = document.getElementById("settings-form") as HTMLFormElement;
   console.log("isPageNavigating: false -> true");
-  isPageNavigating = true; // ページ遷移時の /list_directories エラーを無視するために true に設定する
+  isPageNavigating = true; // ページ遷移時の /api/list_directories エラーを無視するために true に設定する
   updateStartButtonState(); // 初期状態でボタンを更新
 
   settingsForm.addEventListener("submit", async (event: Event) => {
@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(`HTTPエラー: ${response.status}`);
       }
 
-      const result = await response.json();
+      const result = await response.text();
       console.log(result); // サーバーからのレスポンスを確認
       window.location.href = "/progress"; // フォーム送信後にリダイレクト
     } catch (error) {
@@ -144,7 +144,7 @@ document.getElementById("add-directory")?.addEventListener("click", async () => 
   const directoryInput = document.getElementById("directory") as HTMLInputElement;
   const directory = directoryInput.value.trim();
   try {
-    const response = await fetch("/add_directory", {
+    const response = await fetch("/api/add_directory", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -201,8 +201,8 @@ function hidePopup(): void {
 async function fetchDirectories(path: string, parentElement: HTMLUListElement): Promise<void> {
   try {
     console.log("fetchDirectories() called with path:", path);
-    const response = await fetch(`/list_directories?path=${encodeURIComponent(path)}`);
-    console.log("/list_directories response:", response);
+    const response = await fetch(`/api/list_directories?path=${encodeURIComponent(path)}`);
+    console.log("/api/list_directories response:", response);
     const data = await response.json();
 
     if (data.status === "success") {

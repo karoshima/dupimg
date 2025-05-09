@@ -1,6 +1,6 @@
 async function fetchProgressData(): Promise<void> {
   try {
-    const response = await fetch("/progress/data");
+    const response = await fetch("/api/data");
     if (!response.ok) {
       throw new Error(`HTTPエラー: ${response.status}`);
     }

@@ -1,7 +1,8 @@
 import argparse
 from flask import Flask
 from flask_swagger_ui import get_swaggerui_blueprint
-from utils.api_handlers import register_routes
+from utils.api_handlers import register_api_routes
+from utils.html_handlers import register_html_routes
 from utils.profile import enable_profiling
 from utils.directory_utils import set_allowed_directories
 
@@ -13,7 +14,8 @@ app = Flask(__name__)
 app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 # エンドポイントを登録
-register_routes(app)
+register_html_routes(app)
+register_api_routes(app)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the Flask app.")

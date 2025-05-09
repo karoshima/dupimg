@@ -1,8 +1,8 @@
 // サーバーから group_list データを取得して表示する関数
 async function fetchAndDisplayGroups(): Promise<void> {
   try {
-    // /progress/data からデータを取得
-    const response = await fetch("/progress/data");
+    // /api/data からデータを取得
+    const response = await fetch("/api/data");
     if (!response.ok) {
       throw new Error(`HTTPエラー: ${response.status}`);
     }

@@ -124,7 +124,7 @@ progress_init: Dict[str, Any] = {
         "status": "未開始",
         "message": "",
         "steps": [
-            {"name": "画像ファイルの一覧作成", "progress": '?', "status": "未開始"},
+            {"name": "画像ファイルの一覧作成", "progress": 0, "status": "未開始"},
             {"name": "画像ファイルのハッシュ計算", "progress": 0, "status": "未開始"},
             {"name": "類似画像のグルーピング", "progress": 0, "status": "未開始"},
         ],
@@ -179,7 +179,7 @@ def background_image_processing(directory: List[str], algorithm: str, similarity
     inode_map = {}
     group_list = []
     progress_data["page"] = "/progress"
-    progress_data["steps"][0]["progress"] = '?'
+    progress_data["steps"][0]["progress"] = 0
     progress_data["status"] = "一覧作成中"
     progress_data["message"] = "画像ファイルの一覧を作成しています..."
     progress_data["steps"][0]["status"] = "進行中"

@@ -1,124 +1,11 @@
 openapi: 3.0.0
 info:
-  title: 重複画像処理ツール API
+  title: DupImg API
   version: 1.0.0
-  description: 重複画像処理ツールの API ドキュメント
-servers:
-  - url: http://localhost:5000
-    description: ローカル開発環境
+  description: 画像重複検出アプリケーションの API ドキュメント
 
 paths:
-  /:
-    get:
-      summary: 初期ページ
-      description: 初期ページを返します。
-      responses:
-        '200':
-          description: HTML ページ
-          content:
-            text/html:
-              schema:
-                type: string
-
-  /settings:
-    get:
-      summary: 対象ディレクトリ設定ページ
-      description: 対象ディレクトリ設定ページを返します。
-      responses:
-        '200':
-          description: HTML ページ
-          content:
-            text/html:
-              schema:
-                type: string
-    post:
-      summary: 設定を送信
-      description: 対象ディレクトリや設定を送信します。
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                directories:
-                  type: array
-                  items:
-                    type: string
-                  description: 処理対象ディレクトリのリスト
-                algorithm:
-                  type: string
-                  description: 使用するハッシュアルゴリズム
-                similarity:
-                  type: integer
-                  description: 類似度の閾値
-      responses:
-        '200':
-          description: 設定が正常に送信された場合
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  directories:
-                    type: array
-                    items:
-                      type: string
-                  algorithm:
-                    type: string
-                  similarity:
-                    type: integer
-
-  /list_directories:
-    get:
-      summary: サーバー側のディレクトリ構造を取得
-      description: 指定されたパスのディレクトリ構造を取得します。
-      parameters:
-        - name: path
-          in: query
-          required: false
-          description: 基準となるディレクトリパス
-          schema:
-            type: string
-      responses:
-        '200':
-          description: ディレクトリ構造を返します。
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  directories:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        name:
-                          type: string
-                        path:
-                          type: string
-        '400':
-          description: 不正なリクエスト
-        '500':
-          description: サーバーエラー
-
-  /progress:
-    get:
-      summary: 進捗モニタリング画面を取得
-      description: 進捗モニタリング用の HTML ページを返します。
-      responses:
-        '200':
-          description: 進捗モニタリング画面の HTML を返します。
-          content:
-            text/html:
-              schema:
-                type: string
-
-  /progress/data:
+  /api/data:
     get:
       summary: 進捗データを取得
       description: 現在の進捗状況を JSON 形式で返します。
@@ -130,21 +17,22 @@ paths:
               schema:
                 type: object
                 properties:
-                  time:
+                  current_time:
                     type: string
                     format: date-time
-                    description: サーバーの現在時刻
-                  progress:
-                    type: integer
-                    description: 全体の進捗率（0～100）
+                    description: 現在時刻
+                  elapsed_time:
+                    type: string
+                    description: 処理の経過時間
                   status:
                     type: string
-                    description: 現在の処理ステータス
+                    description: 現在のステータス
                   message:
                     type: string
-                    description: 処理の詳細な説明
+                    description: 現在のメッセージ
                   steps:
                     type: array
+                    description: 処理ステップの進捗状況
                     items:
                       type: object
                       properties:
@@ -157,29 +45,96 @@ paths:
                         status:
                           type: string
                           description: ステップのステータス（未開始、進行中、完了）
+                  group_list:
+                    type: array
+                    description: 類似画像のグループリスト
+                    items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          paths:
+                            type: array
+                            items:
+                              type: string
+                            description: 画像のパス
+                          size:
+                            type: integer
+                            description: 画像のサイズ（バイト単位）
+                          date:
+                            type: string
+                            format: date-time
+                            description: 画像の日付
+                          dateType:
+                            type: string
+                            description: 日付の種類（exif または file）
+                          hardlink_ability:
+                            type: boolean
+                            description: ハードリンク可能かどうか
+                          device:
+                            type: integer
+                            description: デバイス ID
+                          thumbnail:
+                            type: string
+                            format: byte
+                            description: サムネイル画像の Base64 エンコード
+        '500':
+          description: サーバーエラー
 
-  /results:
+  /api/list_directories:
     get:
-      summary: 検出結果を取得
-      description: 検出結果を取得します。
+      summary: サブディレクトリのリストを取得
+      description: 指定されたディレクトリのサブディレクトリをリストします。
+      parameters:
+        - name: path
+          in: query
+          required: false
+          description: 基準となるディレクトリのパス
+          schema:
+            type: string
       responses:
         '200':
-          description: 検出結果データを返します。
+          description: サブディレクトリのリストを返します。
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    filename:
-                      type: string
-                    status:
-                      type: string
+                  type: string
+        '400':
+          description: 無効なディレクトリパス
 
-paths:
+  /api/add_directory:
+    post:
+      summary: ディレクトリを追加
+      description: 手入力されたディレクトリを追加します。
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                directory:
+                  type: string
+                  description: 追加するディレクトリのパス
+      responses:
+        '200':
+          description: ディレクトリが正常に追加されました。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    description: 処理結果のステータス
+                  message:
+                    type: string
+                    description: 処理結果のメッセージ
+        '400':
+          description: 無効なディレクトリパス
+
   /api/image:
     get:
       summary: 画像を取得
@@ -199,6 +154,14 @@ paths:
               schema:
                 type: string
                 format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/gif:
+              schema:
+                type: string
+                format: binary
         '404':
           description: ファイルが見つからない場合
           content:
@@ -208,56 +171,4 @@ paths:
                 properties:
                   error:
                     type: string
-        '500':
-          description: サーバーエラー
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-
-  /trash:
-    get:
-      summary: ごみ箱の内容を取得
-      description: ごみ箱の内容を取得します。
-      responses:
-        '200':
-          description: ごみ箱データを返します。
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    filename:
-                      type: string
-    post:
-      summary: ごみ箱のファイルを削除
-      description: ごみ箱内のファイルを削除します。
-      requestBody:
-        required: true
-        content:
-          application/x-www-form-urlencoded:
-            schema:
-              type: object
-              properties:
-                file_id:
-                  type: integer
-                  description: 削除するファイルの ID
-      responses:
-        '200':
-          description: ファイルが正常に削除された場合
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                  file_id:
-                    type: integer
+                    description: エラーメッセージ
