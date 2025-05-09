@@ -1,11 +1,12 @@
 import base64
-from copy import deepcopy
 import imagehash
 import os
 import threading
 import traceback
 import shutil
+from utils.profile import profile
 from datetime import datetime
+from copy import deepcopy
 from io import BytesIO
 from typing import List, Any, Dict
 from PIL import Image
@@ -143,6 +144,7 @@ def get_progress() -> Dict[str, Any]:
     progress_data["time"] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
     return progress_data
 
+@profile
 def background_image_processing(directory: List[str], algorithm: str, similarity: str) -> None:
     """
     画像探索処理をバックグラウンドで実行する。

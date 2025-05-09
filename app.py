@@ -1,8 +1,8 @@
 import argparse
-import os
 from flask import Flask
 from flask_swagger_ui import get_swaggerui_blueprint
 from utils.api_handlers import register_routes
+from utils.profile import enable_profiling
 from utils.directory_utils import set_allowed_directories
 
 SWAGGER_URL = '/api/docs'
@@ -24,7 +24,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("--host", default="0.0.0.0", help="Host to listen on (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=5000, help="Port to listen on (default: 5000)")
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="プロファイリングを有効にする"
+    )
     args = parser.parse_args()
+
+    # プロファイリングを有効にするかどうかを設定する
+    enable_profiling(args.profile)
 
     # 指定されたディレクトリを絶対パスに変換して保持
     set_allowed_directories(args.directories)
