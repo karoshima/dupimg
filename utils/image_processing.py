@@ -153,7 +153,7 @@ def get_progress() -> Dict[str, Any]:
     daystr = f"{int(days)}日 " if days > 0 else ""
     hourstr = f"{int(hours)}時間 " if hours > 0 or days > 0 else ""
     minutestr = f"{int(minutes)}分 " if minutes > 0 or hours > 0 or days > 0 else ""
-    secondstr = f"{seconds}秒"
+    secondstr = f"{seconds:.6f}秒"
     progress_data["current_time"] = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
     progress_data["elapsed_time"] = daystr + hourstr + minutestr + secondstr
     print(f"start_time: {start_time}, finish_time: {finish_time}, elapsed_time: {progress_data['elapsed_time']}")
