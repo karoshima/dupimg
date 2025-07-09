@@ -3,7 +3,7 @@ import mimetypes
 import os
 
 from utils.directory_utils import list_subdirectories, is_directory_allowed, allowed_directories
-from utils.image_processing import start_background_processing, handle_drag_drop_action
+from utils.image_processing import start_background_processing, handle_drag_drop_action, paths
 from utils.progress import get_progress_data
 from utils.mock_data import get_trash_data
 
@@ -50,7 +50,7 @@ def register_api_routes(app) -> None:
         指定された画像ファイルを返すエンドポイント。
         """
         image_path = request.args.get("path")
-        if not image_path or not os.path.exists(image_path):
+        if not image_path or image_path not in paths:
             return jsonify({"error": "Invalid or missing image path"}), 404
 
         mime_type, _ = mimetypes.guess_type(image_path)
