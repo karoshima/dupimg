@@ -4,6 +4,8 @@ import os
 import threading
 import traceback
 import shutil
+import sqlite3
+import json
 from utils.profile import profile
 from datetime import datetime
 from copy import deepcopy
@@ -58,7 +60,6 @@ class ImageFile:
         self.inode: int = None
         self.hardlink_ability: bool = False
         self.device: int = None
-        self.group: List[ImageFile] = None
 
         img: Image.Image = None
         try:
@@ -76,7 +77,7 @@ class ImageFile:
         exif_data = img.getexif()
         date_str = exif_data.get(36867) or exif_data.get(306)
         if date_str:
-            for fmt in [ "%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
+            for fmt in ["%Y:%m:%d %H:%M:%S", "%Y/%m/%d %H:%M:%S"]:
                 try:
                     self.exifdate = datetime.strptime(date_str, fmt)
                     break
@@ -88,6 +89,32 @@ class ImageFile:
         self.device = os.stat(path).st_dev
         self.inode = os.stat(path).st_ino
         self.hardlink_ability = hardlink_ability(path, self.device)
+
+    def to_sqlite_dict(self) -> Dict[str, Any]:
+        return {
+            "device": self.device,
+            "inode": self.inode,
+            "paths": json.dumps(self.paths),
+            "size": self.size,
+            "hash": str(self.hash) if self.hash else None,
+            "exifdate": self.exifdate.strftime('%Y-%m-%d %H:%M:%S') if self.exifdate else None,
+            "filedate": self.filedate.strftime('%Y-%m-%d %H:%M:%S') if self.filedate else None,
+            "hardlink_ability": int(self.hardlink_ability),
+        }
+
+    @classmethod
+    def from_sqlite_row(cls, row: Dict[str, Any]) -> "ImageFile":
+        obj = cls.__new__(cls)
+        obj.device = row["device"]
+        obj.inode = row["inode"]
+        obj.paths = json.loads(row["paths"])
+        obj.size = row["size"]
+        obj.hash = imagehash.hex_to_hash(row["hash"]) if row["hash"] else None
+        obj.exifdate = datetime.strptime(row["exifdate"], '%Y-%m-%d %H:%M:%S') if row["exifdate"] else None
+        obj.filedate = datetime.strptime(row["filedate"], '%Y-%m-%d %H:%M:%S') if row["filedate"] else None
+        obj.hardlink_ability = bool(row["hardlink_ability"])
+        obj.disabled = False
+        return obj
 
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -118,25 +145,22 @@ class ImageFile:
 
 # グローバル変数で進捗状況を管理
 progress_init: Dict[str, Any] = {
-        "current_time": "",
-        "elapsed_time": "",
-        "page": "/settings",
-        "status": "未開始",
-        "message": "",
-        "steps": [
-            {"name": "画像ファイルの一覧作成", "progress": 0, "status": "未開始"},
-            {"name": "画像ファイルのハッシュ計算", "progress": 0, "status": "未開始"},
-            {"name": "類似画像のグルーピング", "progress": 0, "status": "未開始"},
-        ],
-        "group_list": []
-    }
+    "current_time": "",
+    "elapsed_time": "",
+    "page": "/settings",
+    "status": "未開始",
+    "message": "",
+    "steps": [
+        {"name": "画像ファイルの一覧作成", "progress": 0, "status": "未開始"},
+        {"name": "画像ファイルのハッシュ計算", "progress": 0, "status": "未開始"},
+        {"name": "類似画像のグルーピング", "progress": 0, "status": "未開始"},
+    ],
+    "group_list": []
+}
 
 progress_data: Dict[str, Any] = deepcopy(progress_init)
 start_time: datetime = None
 finish_time: datetime = None
-paths: Dict[str, ImageFile] = {}
-inode_map: Dict[int, ImageFile] = {}
-group_list: List[List[ImageFile]] = []
 
 def get_progress() -> Dict[str, Any]:
     """
@@ -161,91 +185,155 @@ def get_progress() -> Dict[str, Any]:
 
 @profile
 def background_image_processing(directory: List[str], algorithm: str, similarity: str) -> None:
-    """
-    画像探索処理をバックグラウンドで実行する。
-    """
-    global progress_data
-    global start_time
-    global finish_time
-    global paths
-    global inode_map
-    global group_list
+    global progress_data, start_time, finish_time
 
-    # ステップ 1: 画像ファイルの一覧作成
+    conn = sqlite3.connect("imagefiles.db")
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS paths (
+            path TEXT PRIMARY KEY,
+            device INTEGER,
+            inode INTEGER
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS images (
+            device INTEGER,
+            inode INTEGER,
+            paths TEXT,
+            size INTEGER,
+            hash TEXT,
+            exifdate TEXT,
+            filedate TEXT,
+            hardlink_ability INTEGER,
+            PRIMARY KEY (device, inode)
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS groups (
+            group_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            members TEXT -- JSON: [ [device, inode], ... ]
+        )
+    ''')
+    c.execute('DELETE FROM paths')
+    c.execute('DELETE FROM images')
+    c.execute('DELETE FROM groups')
+    conn.commit()
+
+    # ステップ1: 画像ファイルの一覧作成
     progress_data = deepcopy(progress_init)
     start_time = datetime.now()
     finish_time = None
-    paths = {}
-    inode_map = {}
-    group_list = []
     progress_data["page"] = "/progress"
     progress_data["steps"][0]["progress"] = 0
     progress_data["status"] = "一覧作成中"
     progress_data["message"] = "画像ファイルの一覧を作成しています..."
     progress_data["steps"][0]["status"] = "進行中"
-    image_files: List[str] = []
+    file_count = 0
     for dir in directory:
         for root, _, files in os.walk(dir):
             if ".@__thumb" in root:
                 continue
             for file in files:
                 if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
-                    image_files.append(os.path.join(root, file))
-                    progress_data["message"] = f"画像ファイルを {len(image_files)} 件見つけました..."
+                    path = os.path.join(root, file)
+                    try:
+                        stat = os.stat(path)
+                        c.execute('INSERT OR IGNORE INTO paths VALUES (?, ?, ?)', (path, stat.st_dev, stat.st_ino))
+                        file_count += 1
+                        progress_data["message"] = f"画像ファイルを {file_count} 件見つけました..."
+                    except Exception as e:
+                        print(f"Error stat file {path}: {e}")
+    conn.commit()
     progress_data["steps"][0]["progress"] = 100
     progress_data["steps"][0]["status"] = "完了"
 
-    # ステップ 2: 画像ファイルのハッシュ計算
+    # ステップ2: 画像ファイルのハッシュ計算と images テーブル登録
     progress_data["status"] = "ハッシュ計算中"
     progress_data["steps"][1]["status"] = "進行中"
-    images: List[ImageFile] = []
-    for index, file_path in enumerate(image_files):
+    c.execute('SELECT path, device, inode FROM paths')
+    for index, (path, device, inode) in enumerate(c):
         try:
-            image = ImageFile(file_path)
-            if not image.disabled:
-                images.append(image)
-            progress_data["steps"][1]["progress"] = ((index + 1) * 10000 // len(image_files)) / 100
-            progress_data["message"] = f"ハッシュ計算中: {index + 1}/{len(image_files)}"
+            image = ImageFile(path)
+            if image.disabled:
+                continue
+            # 既存の (device, inode) があれば paths を追加
+            c2 = conn.cursor()
+            c2.execute('SELECT * FROM images WHERE device = ? AND inode = ?', (image.device, image.inode))
+            row = c2.fetchone()
+            if row:
+                row_dict = dict(zip([d[0] for d in c2.description], row))
+                existing = ImageFile.from_sqlite_row(row_dict)
+                if path not in existing.paths:
+                    existing.paths.append(path)
+                    c2.execute(
+                        'UPDATE images SET paths = ? WHERE device = ? AND inode = ?',
+                        (json.dumps(existing.paths), image.device, image.inode)
+                    )
+            else:
+                c2.execute(
+                    'INSERT INTO images VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    tuple(image.to_sqlite_dict().values())
+                )
+            c2.close()
+            progress_data["steps"][1]["progress"] = ((index + 1) * 10000 // file_count) / 100
+            progress_data["message"] = f"ハッシュ計算中: {index + 1}/{file_count}"
         except Exception as e:
             traceback.print_exc()
-            print(f"Error processing image {file_path}: {e}")
+            print(f"Error processing image {path}: {e}")
+    conn.commit()
     progress_data["steps"][1]["status"] = "完了"
 
-    # ステップ 3: 類似画像のグルーピング
+    # ステップ3: 類似画像のグルーピング
     progress_data["status"] = "グルーピング中"
     progress_data["steps"][2]["status"] = "進行中"
+    c.execute('SELECT * FROM images')
+    rows = c.fetchall()
+    images = [ImageFile.from_sqlite_row(dict(zip([d[0] for d in c.description], row))) for row in rows]
+    used = set()
+    group_list = []
     for index, img in enumerate(images):
-        # 既にハードリンクされたファイルはスキップ
-        if img.inode in inode_map:
-            inode_map[img.inode].paths.extend(img.paths)
-            for path in img.paths:
-                paths[path] = inode_map[img.inode]
+        key = (img.device, img.inode)
+        if key in used:
             continue
-        inode_map[img.inode] = img
-        for path in img.paths:
-            paths[path] = img
-        # 既存のグループに追加するか新規のグループを作るか判定する
-        for group in group_list:
-            if any(abs(img.hash - other.hash) == 0 for other in group):
-                group.append(img)
-                img.group = group
-                break
-        else:
-            group_list.append([img])
-            img.group = group_list[-1]
+        group = [key]
+        used.add(key)
+        for other in images:
+            other_key = (other.device, other.inode)
+            if other_key in used:
+                continue
+            if abs(img.hash - other.hash) == 0:
+                group.append(other_key)
+                used.add(other_key)
+        if len(group) > 1:
+            group_list.append(group)
         progress_data["steps"][2]["progress"] = ((index + 1) * 10000 // len(images)) / 100
         progress_data["message"] = f"グルーピング中: {index + 1}/{len(images)}, グループ数: {len(group_list)}"
+    # groupsテーブルに保存
+    for group in group_list:
+        c.execute('INSERT INTO groups (members) VALUES (?)', (json.dumps(group),))
+    conn.commit()
     progress_data["steps"][2]["progress"] = 100
     progress_data["steps"][2]["status"] = "完了"
 
     # 重複画像のあるグループのみをリストに登録する
-    progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
+    group_dicts = []
+    for group in group_list:
+        members = []
+        for device, inode in group:
+            c.execute('SELECT * FROM images WHERE device = ? AND inode = ?', (device, inode))
+            row = c.fetchone()
+            if row:
+                members.append(ImageFile.from_sqlite_row(dict(zip([d[0] for d in c.description], row))).to_dict())
+        group_dicts.append(members)
+    progress_data["group_list"] = group_dicts
     progress_data["message"] = f"画像探索処理が完了しました。イメージ数 {len(images)} 件、グループ数 {len(group_list)} 件、重複のあるグループは {len(progress_data['group_list'])} 件。"
     # 全体の進捗を完了に設定
     progress_data["progress"] = 100
     progress_data["page"] = "/results"
     progress_data["status"] = "完了"
     finish_time = datetime.now()
+    conn.close()
 
 def start_background_processing(directory: List[str], algorithm: str, similarity: str) -> None:
     """
@@ -338,68 +426,81 @@ def replace_with_copy(source: ImageFile, target: ImageFile) -> tuple[bool, str]:
     except Exception as e:
         return False, f"Error copying {source.paths[0]} to {target.paths[0]}: {e}"
     copied = ImageFile(target.paths.pop(0))
-    target.group.append(copied)
     return replace_with_hardlink(copied, target)
 
-def handle_drag_drop_action(source: str, target: str, action: str) -> tuple[bool, str]:
+def handle_drag_drop_action(source_path: str, target_path: str, action: str) -> tuple[bool, str]:
     """
     ドラッグ＆ドロップのアクションを処理する。
-    :param source: ソース画像のパス
-    :param target: ターゲット画像のパス
+    :param source_path: ソース画像のパス
+    :param target_path: ターゲット画像のパス
     :param action: 実行するアクション (copy_date, hardlink_image, copy_image)
-    :return: 成功したかどうかとメッセージ
+    :return: 成功したかどうか, メッセージ
     """
-    global progress_data
-    global group_list
-
-    # グループリストを更新
-    try:
-        source_image = paths[source]
-    except KeyError:
-        return False, "Source image not found in any group."
-    try:
-        target_image = paths[target]
-    except KeyError:
-        return False, "Target image not found in any group."
-
-    # ソースとターゲットが同じグループに属しているか確認
-    if source_image.group == None:
-        return False, "Source image is not in any group."
-    if target_image.group == None:
-        return False, "Target image is not in any group."
-    if source_image.group != target_image.group:
+    conn = sqlite3.connect("imagefiles.db")
+    c = conn.cursor()
+    # pathsテーブルからdevice, inodeを取得
+    c.execute('SELECT device, inode FROM paths WHERE path = ?', (source_path,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False, "Source image not found in DB."
+    source_device, source_inode = row
+    c.execute('SELECT device, inode FROM paths WHERE path = ?', (target_path,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False, "Target image not found in DB."
+    target_device, target_inode = row
+    # imagesテーブルからImageFileを復元
+    c.execute('SELECT * FROM images WHERE device = ? AND inode = ?', (source_device, source_inode))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False, "Source image data not found in DB."
+    source_image = ImageFile.from_sqlite_row(dict(zip([d[0] for d in c.description], row)))
+    c.execute('SELECT * FROM images WHERE device = ? AND inode = ?', (target_device, target_inode))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return False, "Target image data not found in DB."
+    target_image = ImageFile.from_sqlite_row(dict(zip([d[0] for d in c.description], row)))
+    # groupsテーブルから同じグループか確認
+    c.execute('SELECT group_id, members FROM groups')
+    same_group = False
+    for group_id, members_json in c.fetchall():
+        members = json.loads(members_json)
+        if [source_device, source_inode] in members and [target_device, target_inode] in members:
+            same_group = True
+            break
+    if not same_group:
+        conn.close()
         return False, "Source and target images are not in the same group."
-
     if action == "copy_date":
         # ソースの日時をターゲットにコピーする
         if target_image.exifdate:
+            conn.close()
             return False, "Target image already has EXIF date."
         new_date = (source_image.exifdate or source_image.filedate).timestamp()
         os.utime(target_image.paths[0], (new_date, new_date))
         target_image.filedate = source_image.exifdate or source_image.filedate
-        progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
-        progress_data["message"] = f"{source} の日付を {target} に揃えました。"
+        conn.close()
         return True, "Date copied successfully."
     elif action == "hardlink_image":
         # ターゲットをソースのハードリンクで置き換える
         result, msg = replace_with_hardlink(source_image, target_image)
-        if len(target_image.paths) == 0:
-            # ソースのパスが空になった場合、ソースをグループから削除
-            target_image.group.remove(target_image)
-        progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
-        if result:
-            progress_data["message"] = f"{source} を {target} のハードリンクに置き換えました。"
-        else:
-            progress_data["message"] = f"{source} を {target} のハードリンクに置き換えられませんでした。{msg}"
+        conn.close()
         return result, msg
     elif action == "copy_image":
-        # ターゲットをソースのコピーで置き換える
-        print(f"TODO: Replace {target} with copy to {source}.")
-        target_image.size = source_image.size
-        target_image.hash = source_image.hash
-        target_image.exifdate = source_image.exifdate
-        target_image.filedate = source_image.filedate
-        progress_data["group_list"] = list(map(lambda x: list(map(lambda y: y.to_dict(), x)), filter(lambda x: len(x) > 1 or len(x[0].paths) > 1, group_list)))
-        progress_data["message"] = f"{source} を {target} のコピーで置き換えました。"
-        return True, "Target replaced with copy successfully."
+        result, msg = replace_with_copy(source_image, target_image)
+        conn.close()
+        return result, msg
+    conn.close()
     return False, "Invalid action specified."
+
+def image_path_exists(path: str) -> bool:
+    conn = sqlite3.connect("imagefiles.db")
+    c = conn.cursor()
+    c.execute('SELECT 1 FROM paths WHERE path = ?', (path,))
+    exists = c.fetchone() is not None
+    conn.close()
+    return exists
